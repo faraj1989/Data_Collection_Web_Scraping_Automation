@@ -1,10 +1,12 @@
 import argparse
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 
 from project_config import load_env_file
+from project_logging import setup_logger
 
 
 def parse_args():
@@ -19,7 +21,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_smartcare(script_path: Path, download_dir: Path, output_dir: Path, login_attempts: int) -> int:
+def run_smartcare(script_path: Path, download_dir: Path, output_dir: Path, login_attempts: int, logger: logging.Logger) -> int:
     env = os.environ.copy()
     env["SMARTCARE_DOWNLOAD_DIR"] = str(download_dir)
     env["SMARTCARE_OUTPUT_DIR"] = str(output_dir)
@@ -35,10 +37,15 @@ def run_smartcare(script_path: Path, download_dir: Path, output_dir: Path, login
         "--login-attempts",
         str(login_attempts),
     ]
-    return subprocess.run(cmd, cwd=script_path.parent, env=env).returncode
+    result = subprocess.run(cmd, cwd=script_path.parent, env=env, capture_output=True, text=True)
+    if result.stdout:
+        logger.info(result.stdout.strip())
+    if result.stderr:
+        logger.error(result.stderr.strip())
+    return result.returncode
 
 
-def run_analysis(script_path: Path, source_dir: Path, output_dir: Path, history_file: Path) -> int:
+def run_analysis(script_path: Path, source_dir: Path, output_dir: Path, history_file: Path, logger: logging.Logger) -> int:
     cmd = [
         sys.executable,
         str(script_path),
@@ -49,12 +56,18 @@ def run_analysis(script_path: Path, source_dir: Path, output_dir: Path, history_
         "--history-file",
         str(history_file),
     ]
-    return subprocess.run(cmd, cwd=script_path.parent, env=os.environ.copy()).returncode
+    result = subprocess.run(cmd, cwd=script_path.parent, env=os.environ.copy(), capture_output=True, text=True)
+    if result.stdout:
+        logger.info(result.stdout.strip())
+    if result.stderr:
+        logger.error(result.stderr.strip())
+    return result.returncode
 
 
 def main() -> int:
     args = parse_args()
     load_env_file(override=True)
+    logger = setup_logger("smartcare-analysis-wrapper")
 
     download_dir = Path(args.download_dir).expanduser().resolve()
     smartcare_output_dir = Path(args.smartcare_output_dir).expanduser().resolve()
@@ -66,19 +79,19 @@ def main() -> int:
     analysis_output_dir.mkdir(parents=True, exist_ok=True)
     history_file.parent.mkdir(parents=True, exist_ok=True)
 
-    print("Running SmartCare CEM...")
-    rc = run_smartcare(Path(args.smartcare_script), download_dir, smartcare_output_dir, args.login_attempts)
+    logger.info("Running SmartCare CEM...")
+    rc = run_smartcare(Path(args.smartcare_script), download_dir, smartcare_output_dir, args.login_attempts, logger)
     if rc != 0:
-        print(f"SmartCare CEM failed with exit code {rc}")
+        logger.error("SmartCare CEM failed with exit code %d", rc)
         return rc
 
-    print("SmartCare CEM completed. Running analysis...")
-    rc = run_analysis(Path(args.analysis_script), smartcare_output_dir, analysis_output_dir, history_file)
+    logger.info("SmartCare CEM completed. Running analysis...")
+    rc = run_analysis(Path(args.analysis_script), smartcare_output_dir, analysis_output_dir, history_file, logger)
     if rc != 0:
-        print(f"Analysis failed with exit code {rc}")
+        logger.error("Analysis failed with exit code %d", rc)
         return rc
 
-    print("SmartCare + analysis task completed successfully.")
+    logger.info("SmartCare + analysis task completed successfully.")
     return 0
 
 

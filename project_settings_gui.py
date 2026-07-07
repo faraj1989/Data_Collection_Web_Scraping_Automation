@@ -62,6 +62,12 @@ SETTINGS = [
         ],
     },
     {
+        "section": "Logging",
+        "fields": [
+            ("PROJECT_LOG_DIR", "Project log folder", str(PROJECT_ROOT / "logs"), "dir", False),
+        ],
+    },
+    {
         "section": "Analysis",
         "fields": [
             ("ANALYSIS_SOURCE_DIR", "Analysis source folder", str(Path.home() / "Downloads"), "dir", False),

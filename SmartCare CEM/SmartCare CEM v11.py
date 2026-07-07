@@ -1,5 +1,6 @@
 import argparse
 import glob
+import logging
 import os
 import shutil
 import sys
@@ -11,6 +12,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 
 from project_config import env_int, env_path_str, env_str, load_env_file
+from project_logging import setup_logger
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -19,6 +21,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 
 load_env_file()
+logger = setup_logger("smartcare-cem")
+
+
+def print(*args, sep=" ", end="\n", **kwargs):
+    message = sep.join(str(arg) for arg in args)
+    if message.endswith("\n"):
+        message = message[:-1]
+    logger.info(message)
 
 # --- Portal Core Configuration ---
 LOGIN_URL = env_str("SMARTCARE_LOGIN_URL", "https://10.171.200.52:38443/")
