@@ -13,6 +13,8 @@ from typing import List
 
 import pandas as pd
 
+from project_logging import setup_logger as create_logger
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xlsm"}
@@ -20,12 +22,7 @@ COMPREHENSIVE_PREFIX = "Comprehensive_Analysis"
 
 
 def setup_logger() -> logging.Logger:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
-    return logging.getLogger("download-analysis")
+    return create_logger("download-analysis")
 
 
 def normalize_column_name(name: object) -> str:
