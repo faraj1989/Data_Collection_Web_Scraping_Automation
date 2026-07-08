@@ -615,25 +615,40 @@ def save_to_excel(combined_df, reports, output_path):
     return output_path
 
 
-def main(date_folder=None):
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Process PS Traffic raw exports into combined traffic reports")
+    parser.add_argument("--base-dir", type=str, default=None, help="Base folder containing dated raw data folders")
+    parser.add_argument("--date", type=str, default=None, help="Date folder name in YYYYMMDD format")
+    parser.add_argument("--output-dir", type=str, default=None, help="Output folder for saved reports")
+    parser.add_argument("--archive-dir", type=str, default=None, help="Archive folder for historical output")
+    return parser.parse_args()
+
+
+def main(date_folder=None, output_folder=None, archive_dir=None):
     """
     Main function to process PS Daily Traffic files from unzipped folder.
     """
     if date_folder is None:
-        # Use today's date folder
-        today_str = datetime.now().strftime("%Y%m%d")
-        base_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Subscribers", "Raw Data")
-        date_folder = os.path.join(base_folder, today_str)
+        args = parse_args()
+        base_dir = Path(args.base_dir) if args.base_dir else Path(__file__).resolve().parent.parent / "Subscribers" / "Raw Data"
+        date_str = args.date if args.date else datetime.now().strftime("%Y%m%d")
+        date_folder = base_dir / date_str
+        output_folder = Path(args.output_dir) if args.output_dir else date_folder / "output"
+        archive_dir = Path(args.archive_dir) if args.archive_dir else Path(args.base_dir or Path(__file__).resolve().parent.parent / "Subscribers" / "Raw Data") / "Historical_Archive"
+    else:
+        date_folder = Path(date_folder)
+        output_folder = Path(output_folder) if output_folder else date_folder / "output"
+        archive_dir = Path(archive_dir) if archive_dir else date_folder.parent / "Historical_Archive"
 
     print("=" * 60)
     print("Processing PS Daily Traffic Files")
     print("=" * 60)
     print(f"📂 Date folder: {date_folder}")
 
-    unzipped_folder = os.path.join(date_folder, "unzipped")
+    unzipped_folder = date_folder / "unzipped"
 
     # Find the PS Traffic files
-    file_2g, file_3g, file_4g = find_ps_traffic_files(unzipped_folder)
+    file_2g, file_3g, file_4g = find_ps_traffic_files(str(unzipped_folder))
 
     if not file_2g and not file_3g and not file_4g:
         print("❌ No PS Traffic files found!")
@@ -734,8 +749,4 @@ def main(date_folder=None):
 
 # Run the script
 if __name__ == "__main__":
-    # Use the specific folder from your system
-    specific_folder = r"F:\python\2026\NAE NET Eco Scraping\Subscribers\Raw Data\20260617"
-
-    print(f"🔍 Using specific folder: {specific_folder}")
-    result = main(specific_folder)
+    raise SystemExit(main())

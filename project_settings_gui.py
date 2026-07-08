@@ -87,6 +87,9 @@ SETTINGS = [
             ("FTP_REMOTE_PATH", "FTPS remote path", "/ftproot/New", "text", False),
             ("FTP_FILE_PATTERN", "FTPS file pattern", "*{yyyymmdd}*.zip", "text", False),
             ("FTP_TIMEOUT_SECONDS", "FTPS timeout seconds", "30", "text", False),
+            ("PS_TRAFFIC_SOURCE_DIR", "PS Traffic source folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data"), "dir", False),
+            ("PS_TRAFFIC_OUTPUT_DIR", "PS Traffic output folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "PS_Traffic_Output"), "dir", False),
+            ("INTERFERENCE_OUTPUT_DIR", "Interference output folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "Interference_Output"), "dir", False),
         ],
     },
     {
@@ -97,6 +100,10 @@ SETTINGS = [
             ("NETECO_SCRAPER_SCRIPT_PATH", "NetEco Scraper script", "neteco_continuous 15-5-2026.py", "file", False),
             ("MAE_SCRAPER_SCRIPT_PATH", "MAE Scraper script", "mae_scraper 31-5-26.py", "file", False),
             ("SMARTCARE_CEM_SCRIPT_PATH", "SmartCare CEM script", "SmartCare CEM/SmartCare CEM v11.py", "file", False),
+            ("ANALYSIS_SCRIPT_PATH", "Comprehensive Analysis script", "download_analysis_pipeline.py", "file", False),
+            ("SUBSCRIBERS_FTP_DAILY_SCRIPT_PATH", "Subscribers FTP daily script", "subscribers_ftp_daily.py", "file", False),
+            ("SUBSCRIBERS_INTERFERENCE_MONTHLY_SCRIPT_PATH", "Subscribers interference monthly script", "subscribers_interference_monthly.py", "file", False),
+            ("PS_TRAFFIC_SCRIPT_PATH", "PS Traffic per site script", "PS Traffic per site/PS Traffic per site v3 .py", "file", False),
             ("SUBSCRIBERS_FTPS_SCRIPT_PATH", "Subscribers FTPS script", "subscriers with 2G interference with ftp 31-5-26_v2.py", "file", False),
         ],
     },
@@ -115,6 +122,9 @@ SCRIPT_PATH_KEYS = {
     "MAE Scraper": "MAE_SCRAPER_SCRIPT_PATH",
     "SmartCare CEM": "SMARTCARE_CEM_SCRIPT_PATH",
     "Comprehensive Analysis": "ANALYSIS_SCRIPT_PATH",
+    "Subscribers FTP Daily": "SUBSCRIBERS_FTP_DAILY_SCRIPT_PATH",
+    "Subscribers Interference Monthly": "SUBSCRIBERS_INTERFERENCE_MONTHLY_SCRIPT_PATH",
+    "PS Traffic Per Site": "PS_TRAFFIC_SCRIPT_PATH",
     "Subscribers FTPS": "SUBSCRIBERS_FTPS_SCRIPT_PATH",
 }
 
@@ -125,6 +135,9 @@ SCRIPT_PATH_DEFAULTS = {
     "MAE Scraper": "mae_scraper 31-5-26.py",
     "SmartCare CEM": "SmartCare CEM/SmartCare CEM v11.py",
     "Comprehensive Analysis": "download_analysis_pipeline.py",
+    "Subscribers FTP Daily": "subscribers_ftp_daily.py",
+    "Subscribers Interference Monthly": "subscribers_interference_monthly.py",
+    "PS Traffic Per Site": "PS Traffic per site/PS Traffic per site v3 .py",
     "Subscribers FTPS": "subscriers with 2G interference with ftp 31-5-26_v2.py",
 }
 
@@ -144,6 +157,9 @@ REQUIRED_FOR_SCRIPT = {
     "MAE Scraper": ("MAE_URL", "MAE_USERNAME", "MAE_PASSWORD"),
     "SmartCare CEM": ("SMARTCARE_LOGIN_URL", "SMARTCARE_USERNAME", "SMARTCARE_PASSWORD"),
     "Subscribers FTPS": ("FTP_HOST", "FTP_USERNAME", "FTP_PASSWORD"),
+    "Subscribers FTP Daily": ("FTP_HOST", "FTP_USERNAME", "FTP_PASSWORD"),
+    "Subscribers Interference Monthly": ("FTP_HOST", "FTP_USERNAME", "FTP_PASSWORD"),
+    "PS Traffic Per Site": ("PS_TRAFFIC_SOURCE_DIR",),
 }
 
 INTEGER_FIELDS = {
@@ -232,50 +248,74 @@ class SettingsApp(tk.Tk):
         ttk.Label(header, text=f"Saved to: {ENV_PATH}", foreground="#555").pack(side="right")
 
         container = ttk.Frame(self)
-        container.pack(fill="both", expand=True, padx=14)
+        container.pack(fill="both", expand=True, padx=14, pady=(0, 0))
 
-        canvas = tk.Canvas(container, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        self.form = ttk.Frame(canvas)
-        self.form.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self.form, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        notebook = ttk.Notebook(container)
+        notebook.pack(fill="both", expand=True)
 
-        row = 0
+        tabs = {
+            "General": ttk.Frame(notebook),
+            "Scrapers": ttk.Frame(notebook),
+            "SmartCare & Analysis": ttk.Frame(notebook),
+            "Subscribers": ttk.Frame(notebook),
+        }
+
+        for tab_name, frame in tabs.items():
+            notebook.add(frame, text=tab_name)
+            frame.columnconfigure(1, weight=1)
+
+        tab_row = {name: 0 for name in tabs}
+
+        section_tab = {
+            "NOC Reports": "General",
+            "Logging": "General",
+            "Script Paths": "General",
+            "Telegram Bot": "General",
+            "MAE Scraper": "Scrapers",
+            "NetEco Scraper": "Scrapers",
+            "SmartCare CEM": "SmartCare & Analysis",
+            "Analysis": "SmartCare & Analysis",
+            "Subscribers FTPS": "Subscribers",
+        }
+
         for section in SETTINGS:
-            label = ttk.Label(self.form, text=section["section"], font=("Segoe UI", 12, "bold"))
-            label.grid(row=row, column=0, sticky="w", pady=(16, 6), padx=(2, 8))
+            tab_name = section_tab.get(section["section"], "General")
+            parent = tabs[tab_name]
+            row = tab_row[tab_name]
+
+            section_label = ttk.Label(parent, text=section["section"], font=("Segoe UI", 12, "bold"))
+            section_label.grid(row=row, column=0, columnspan=3, sticky="w", pady=(16, 6), padx=(2, 8))
             row += 1
+
             for key, label_text, _default, field_type, is_secret in section["fields"]:
-                ttk.Label(self.form, text=label_text).grid(row=row, column=0, sticky="w", padx=(2, 8), pady=3)
+                ttk.Label(parent, text=label_text).grid(row=row, column=0, sticky="w", padx=(2, 8), pady=3)
                 var = tk.StringVar()
-                entry = ttk.Entry(self.form, textvariable=var, width=86, show="*" if is_secret else "")
+                entry = ttk.Entry(parent, textvariable=var, width=86, show="*" if is_secret else "")
                 entry.grid(row=row, column=1, sticky="ew", pady=3)
                 self.variables[key] = (var, entry, is_secret)
+
                 if field_type == "dir":
-                    ttk.Button(self.form, text="Browse", command=lambda v=var: self.choose_dir(v)).grid(
+                    ttk.Button(parent, text="Browse", command=lambda v=var: self.choose_dir(v)).grid(
                         row=row, column=2, padx=(6, 2), pady=3
                     )
                 elif field_type == "file":
-                    ttk.Button(self.form, text="Browse", command=lambda v=var: self.choose_file(v)).grid(
+                    ttk.Button(parent, text="Browse", command=lambda v=var: self.choose_file(v)).grid(
                         row=row, column=2, padx=(6, 2), pady=3
                     )
                 row += 1
 
-        self.form.columnconfigure(1, weight=1)
+            tab_row[tab_name] = row
 
-        footer = ttk.Frame(self, padding=14)
-        footer.pack(fill="x")
+        control_frame = ttk.Frame(self)
+        control_frame.pack(fill="x", padx=14, pady=(8, 8))
         ttk.Checkbutton(
-            footer,
+            control_frame,
             text="Show passwords/tokens",
             variable=self.show_secrets,
             command=self.toggle_secret_visibility,
         ).pack(side="left")
-        ttk.Button(footer, text="Reload", command=self.load_values).pack(side="right", padx=(8, 0))
-        ttk.Button(footer, text="Save Settings", command=self.save_values).pack(side="right", padx=(8, 0))
+        ttk.Button(control_frame, text="Reload", command=self.load_values).pack(side="right", padx=(8, 0))
+        ttk.Button(control_frame, text="Save Settings", command=self.save_values).pack(side="right", padx=(8, 0))
 
         runner = ttk.LabelFrame(self, text="Run Script", padding=10)
         runner.pack(fill="x", padx=14, pady=(0, 14))
