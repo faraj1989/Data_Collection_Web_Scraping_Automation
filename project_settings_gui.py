@@ -1,8 +1,10 @@
 import os
+import socket
 import subprocess
 import sys
 import tkinter as tk
 from datetime import datetime, timedelta
+from ftplib import FTP_TLS
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -77,9 +79,8 @@ SETTINGS = [
         ],
     },
     {
-        "section": "Subscribers FTPS",
+        "section": "FTP Configuration",
         "fields": [
-            ("SUBSCRIBERS_RAW_DIR", "Subscribers raw data folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data"), "dir", False),
             ("FTP_HOST", "FTPS host", "", "text", False),
             ("FTP_PORT", "FTPS port", "21", "text", False),
             ("FTP_USERNAME", "FTPS username", "", "text", False),
@@ -87,9 +88,37 @@ SETTINGS = [
             ("FTP_REMOTE_PATH", "FTPS remote path", "/ftproot/New", "text", False),
             ("FTP_FILE_PATTERN", "FTPS file pattern", "*{yyyymmdd}*.zip", "text", False),
             ("FTP_TIMEOUT_SECONDS", "FTPS timeout seconds", "30", "text", False),
+        ],
+    },
+    {
+        "section": "Monthly Interference",
+        "fields": [
+            ("INTERFERENCE_FTP_ROOT", "Interference FTP root", "/ftproot/New", "text", False),
+            ("INTERFERENCE_2G_FILENAME_PREFIX", "2G filename start", "2G Monthly HQ interference_", "text", False),
+            ("INTERFERENCE_3G_FILENAME_TOKEN", "3G filename contains", "(3g)", "text", False),
+            ("INTERFERENCE_4G_FILENAME_TOKEN", "4G filename contains", "(4g)", "text", False),
+            ("INTERFERENCE_FILE_TYPE", "Interference file type", ".csv", "text", False),
+            ("INTERFERENCE_OUTPUT_DIR", "Interference output folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "Interference_Output"), "dir", False),
+        ],
+    },
+    {
+        "section": "PS Traffic per site",
+        "fields": [
+            ("PS_TRAFFIC_FTP_PREFIX", "PS Traffic ZIP prefix", "PS Daily Traffic_2G_3G_4G_", "text", False),
             ("PS_TRAFFIC_SOURCE_DIR", "PS Traffic source folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data"), "dir", False),
             ("PS_TRAFFIC_OUTPUT_DIR", "PS Traffic output folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "PS_Traffic_Output"), "dir", False),
-            ("INTERFERENCE_OUTPUT_DIR", "Interference output folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "Interference_Output"), "dir", False),
+            ("PS_TRAFFIC_FILE_2G_TOKEN", "2G CSV token", "(PS Traffic 2G)", "text", False),
+            ("PS_TRAFFIC_FILE_3G_TOKEN", "3G CSV token", "(PS Traffic 3G)", "text", False),
+            ("PS_TRAFFIC_FILE_4G_TOKEN", "4G CSV token", "(PS Traffic 4G)", "text", False),
+        ],
+    },
+    {
+        "section": "Subscribers Calculation",
+        "fields": [
+            ("SUBSCRIBERS_INPUT_DIR", "Subscriber input folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data"), "dir", False),
+            ("SUBSCRIBERS_OUTPUT_DIR", "Subscriber calculation output folder", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "Subscribers_Output"), "dir", False),
+            ("SUBSCRIBERS_HISTORY_FILE", "Subscriber history file", str(PROJECT_ROOT / "Subscribers" / "Raw Data" / "Subscribers_History.xlsx"), "file", False),
+            ("SUBSCRIBERS_SCRIPT_PATH", "Subscriber calculation script", "subscriers with 2G interference with ftp 31-5-26_v2.py", "file", False),
         ],
     },
     {
@@ -275,7 +304,10 @@ class SettingsApp(tk.Tk):
             "NetEco Scraper": "Scrapers",
             "SmartCare CEM": "SmartCare & Analysis",
             "Analysis": "SmartCare & Analysis",
-            "Subscribers FTPS": "Subscribers",
+            "FTP Configuration": "Subscribers",
+            "Monthly Interference": "Subscribers",
+            "PS Traffic per site": "Subscribers",
+            "Subscribers Calculation": "Subscribers",
         }
 
         for section in SETTINGS:
@@ -305,6 +337,11 @@ class SettingsApp(tk.Tk):
                 row += 1
 
             tab_row[tab_name] = row
+
+        subscriber_actions = ttk.Frame(tabs["Subscribers"], padding=(2, 8))
+        subscriber_actions.grid(row=tab_row["Subscribers"], column=0, columnspan=3, sticky="ew")
+        ttk.Button(subscriber_actions, text="Test FTP Connection", command=self.test_ftp_connection).pack(side="left")
+        ttk.Label(subscriber_actions, text="Validate FTP login and root path before running subscriber downloads.", foreground="#555").pack(side="left", padx=8)
 
         control_frame = ttk.Frame(self)
         control_frame.pack(fill="x", padx=14, pady=(8, 8))
