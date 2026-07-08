@@ -3,6 +3,7 @@ import time
 import shutil
 import winreg
 from selenium import webdriver
+from selenium.common.exceptions import InvalidSessionIdException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -67,6 +68,21 @@ def print_driver_versions():
     print(f"🔧 Browser version: {browser_version}")
     print(f"🔧 ChromeDriver version: {chromedriver_version}")
 
+
+def create_driver():
+    global driver
+    try:
+        driver.quit()
+    except Exception:
+        pass
+
+    print("🔧 Starting Chrome browser...")
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    print(f"🔧 Using ChromeDriver at: {service.path}")
+    print_driver_versions()
+
+
 # ========== INITIALIZE BROWSER ==========
 chrome_options = Options()
 chrome_options.add_argument("--ignore-certificate-errors")
@@ -77,10 +93,7 @@ chrome_options.add_experimental_option("prefs", {
 })
 
 print("🔧 Initializing ChromeDriver...")
-service = Service(ChromeDriverManager().install())
-driver = webdriver.Chrome(service=service, options=chrome_options)
-print(f"🔧 Using ChromeDriver at: {service.path}")
-print_driver_versions()
+create_driver()
 
 def login_and_navigate():
     """Handles initial login and moving to the Current Alarms page."""
@@ -142,7 +155,28 @@ def login_and_navigate():
             # Wait for login to process
             print("⏳ Waiting for login to complete...")
             time.sleep(8)
-            
+
+            login_form_still = len(driver.find_elements(By.ID, "username")) > 0
+            if login_form_still:
+                page_text = driver.page_source.lower()
+                login_error_keywords = [
+                    "invalid username",
+                    "invalid password",
+                    "incorrect username",
+                    "incorrect password",
+                    "wrong username",
+                    "wrong password",
+                    "password expired",
+                    "expired password",
+                    "credentials",
+                    "login failed",
+                    "account locked",
+                ]
+                if any(keyword in page_text for keyword in login_error_keywords):
+                    print("❌ Login failed: invalid credentials or expired password detected.")
+                    return False
+                print("⚠️ Login appears to have failed; login form still visible.")
+                return False
         else:
             print("ℹ️ Login form not present; assuming session is already authenticated.")
 
@@ -253,10 +287,23 @@ try:
                 
         except Exception as e:
             print(f"⚠️ Cycle Error: {e}")
-            driver.save_screenshot(f"error_{time.strftime('%Y%m%d_%H%M%S')}.png")
-            driver.get(URL)
+            invalid_session = isinstance(e, InvalidSessionIdException) or "invalid session id" in str(e).lower()
+            if not invalid_session:
+                try:
+                    driver.save_screenshot(f"error_{time.strftime('%Y%m%d_%H%M%S')}.png")
+                except Exception as screenshot_error:
+                    print(f"⚠️ Screenshot failed: {screenshot_error}")
+
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+            create_driver()
             time.sleep(5)
-            login_and_navigate()
+            if not login_and_navigate():
+                print("❌ Re-login failed. Exiting...")
+                break
         
         # Countdown
         print(f"😴 Sleeping for {INTERVAL_SECONDS // 60} minutes...")
