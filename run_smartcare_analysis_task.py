@@ -9,14 +9,32 @@ from project_config import load_env_file
 from project_logging import setup_logger
 
 
+def default_paths() -> dict:
+    project_root = Path(__file__).resolve().parent
+    download_dir = Path(os.getenv("SMARTCARE_DOWNLOAD_DIR", str(Path.home() / "Downloads"))).expanduser()
+    smartcare_output_dir = Path(os.getenv("SMARTCARE_OUTPUT_DIR", str(Path.home() / "Downloads" / "SmartCare_Exports"))).expanduser()
+    analysis_output_dir = Path(os.getenv("ANALYSIS_OUTPUT_DIR", str(Path.home() / "Downloads" / "Processed_Analysis"))).expanduser()
+    history_file = Path(os.getenv("ANALYSIS_HISTORY_FILE", str(analysis_output_dir / "Comprehensive_Analysis_Historical.xlsx"))).expanduser()
+
+    return {
+        "smartcare_script": project_root / "SmartCare CEM" / "SmartCare CEM v11.py",
+        "analysis_script": project_root / "download_analysis_pipeline.py",
+        "download_dir": download_dir,
+        "smartcare_output_dir": smartcare_output_dir,
+        "analysis_output_dir": analysis_output_dir,
+        "history_file": history_file,
+    }
+
+
 def parse_args():
+    defaults = default_paths()
     parser = argparse.ArgumentParser(description="Run SmartCare CEM then analysis and update history")
-    parser.add_argument("--smartcare-script", required=True)
-    parser.add_argument("--analysis-script", required=True)
-    parser.add_argument("--download-dir", required=True)
-    parser.add_argument("--smartcare-output-dir", required=True)
-    parser.add_argument("--analysis-output-dir", required=True)
-    parser.add_argument("--history-file", required=True)
+    parser.add_argument("--smartcare-script", default=str(defaults["smartcare_script"]))
+    parser.add_argument("--analysis-script", default=str(defaults["analysis_script"]))
+    parser.add_argument("--download-dir", default=str(defaults["download_dir"]))
+    parser.add_argument("--smartcare-output-dir", default=str(defaults["smartcare_output_dir"]))
+    parser.add_argument("--analysis-output-dir", default=str(defaults["analysis_output_dir"]))
+    parser.add_argument("--history-file", default=str(defaults["history_file"]))
     parser.add_argument("--login-attempts", type=int, default=2)
     return parser.parse_args()
 
@@ -97,3 +115,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
