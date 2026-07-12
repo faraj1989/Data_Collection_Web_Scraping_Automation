@@ -568,6 +568,32 @@ class SettingsApp(tk.Tk):
         subprocess.Popen(cmd, cwd=PROJECT_ROOT, env=env, creationflags=creationflags)
         messagebox.showinfo("Started", f"Started full SmartCare + analysis task:\n{wrapper_script}")
 
+    def test_ftp_connection(self):
+        values = self.current_values()
+        host = values.get("FTP_HOST", "")
+        port = int(values.get("FTP_PORT", "21") or 21)
+        username = values.get("FTP_USERNAME", "")
+        password = values.get("FTP_PASSWORD", "")
+        remote_path = values.get("FTP_REMOTE_PATH", "/ftproot/New")
+        timeout = int(values.get("FTP_TIMEOUT_SECONDS", "30") or 30)
+
+        if not host or not username or not password:
+            messagebox.showerror("FTP connection test", "FTP host, username, and password are required.")
+            return
+
+        try:
+            ftps = FTP_TLS()
+            ftps.connect(host, port, timeout=timeout)
+            ftps.auth()
+            ftps.login(username, password)
+            ftps.prot_p()
+            ftps.cwd(remote_path)
+            entries = ftps.nlst()
+            ftps.quit()
+            messagebox.showinfo("FTP connection test", f"Connected successfully. {len(entries)} entries found in {remote_path}.")
+        except Exception as exc:
+            messagebox.showerror("FTP connection test", f"FTP connection failed: {type(exc).__name__}: {exc}")
+
     def schedule_weekly_task(self):
         if os.name != "nt":
             messagebox.showerror("Unsupported", "Scheduled task creation is only supported on Windows.")
