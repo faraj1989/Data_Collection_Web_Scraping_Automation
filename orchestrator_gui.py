@@ -26,8 +26,12 @@ LOG_DIR.mkdir(exist_ok=True)
 SCRIPTS = [
     {"name": "MAE Scraper", "file": "mae_scraper.py", "desc": "Exports MAE Current Alarms"},
     {"name": "NetEco Scraper", "file": "neteco_scraper.py", "desc": "Exports NetEco Current Alarms"},
+    {"name": "NetEco All Alarms Scraper", "file": "neteco_all_alarms_scraper.py",
+     "desc": "Exports NetEco All Current Alarms (LLVD/BLVD/battery evidence)"},
     {"name": "Merge Reports", "file": "merge_noc_reports.py",
      "desc": "Merges MAE + NetEco reports"},
+    {"name": "Enhanced NOC Analysis", "file": "enhanced_noc_analysis.py",
+     "desc": "Merges MAE + NetEco + All Alarms into P1/P2/P3 site triage"},
     {"name": "Telegram Bot", "file": "telegram_noc_bot.py", "desc": "Telegram NOC Bot for alarms"},
 ]
 
