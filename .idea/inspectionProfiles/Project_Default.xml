@@ -1,0 +1,52 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="anyio" />
+          <option value="attrs" />
+          <option value="certifi" />
+          <option value="cffi" />
+          <option value="charset-normalizer" />
+          <option value="contourpy" />
+          <option value="cycler" />
+          <option value="et_xmlfile" />
+          <option value="fonttools" />
+          <option value="h11" />
+          <option value="httpcore" />
+          <option value="httpx" />
+          <option value="idna" />
+          <option value="kiwisolver" />
+          <option value="matplotlib" />
+          <option value="numpy" />
+          <option value="openpyxl" />
+          <option value="outcome" />
+          <option value="packaging" />
+          <option value="pandas" />
+          <option value="pandas-stubs" />
+          <option value="pillow" />
+          <option value="pycparser" />
+          <option value="pyparsing" />
+          <option value="PySocks" />
+          <option value="python-dateutil" />
+          <option value="python-dotenv" />
+          <option value="python-telegram-bot" />
+          <option value="requests" />
+          <option value="selenium" />
+          <option value="six" />
+          <option value="sniffio" />
+          <option value="sortedcontainers" />
+          <option value="trio" />
+          <option value="trio-websocket" />
+          <option value="typing_extensions" />
+          <option value="tzdata" />
+          <option value="urllib3" />
+          <option value="webdriver-manager" />
+          <option value="websocket-client" />
+          <option value="wsproto" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

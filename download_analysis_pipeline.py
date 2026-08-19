@@ -13,12 +13,32 @@ from typing import List
 
 import pandas as pd
 
+from project_config import load_env_file
 from project_logging import setup_logger as create_logger
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+load_env_file()
 
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xlsm"}
 COMPREHENSIVE_PREFIX = "Comprehensive_Analysis"
+
+# =============================================================
+# CENTRALIZED DIRECTORIES (from GUI)
+# =============================================================
+DATA_ROOT = Path(os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data"))
+
+# SmartCare paths
+SMARTCARE_DOWNLOAD_DIR = Path(os.environ.get("SMARTCARE_DOWNLOAD_DIR", DATA_ROOT / "Downloads"))
+SMARTCARE_OUTPUT_DIR = Path(os.environ.get("SMARTCARE_OUTPUT_DIR", DATA_ROOT / "SmartCare_Exports"))
+
+# Analysis paths
+ANALYSIS_SOURCE_DIR = Path(os.environ.get("ANALYSIS_SOURCE_DIR", SMARTCARE_OUTPUT_DIR))
+ANALYSIS_OUTPUT_DIR = Path(os.environ.get("ANALYSIS_OUTPUT_DIR", DATA_ROOT / "Processed_Analysis"))
+ANALYSIS_HISTORY_FILE = Path(
+    os.environ.get("ANALYSIS_HISTORY_FILE", ANALYSIS_OUTPUT_DIR / "Comprehensive_Analysis_Historical.xlsx"))
+
+
+# =============================================================
 
 
 def setup_logger() -> logging.Logger:
@@ -88,7 +108,7 @@ def build_top100_traffic(df: pd.DataFrame) -> pd.DataFrame:
         df.groupby(["date", "application"], dropna=False, as_index=False)["total_traffic_byte"].sum()
         .rename(columns={"total_traffic_byte": "total_traffic_bytes"})
     )
-    grouped["total_traffic_gb"] = grouped["total_traffic_bytes"] / 1024**3
+    grouped["total_traffic_gb"] = grouped["total_traffic_bytes"] / 1024 ** 3
     grouped = grouped.sort_values(["date", "total_traffic_bytes"], ascending=[True, False])
     top100 = grouped.groupby("date", group_keys=False).head(100)
     return top100
@@ -113,7 +133,7 @@ def build_rate_metrics(df: pd.DataFrame) -> pd.DataFrame:
         rates[col] = normalize_rate_series(rates[col])
 
     rates["total_traffic_bytes"] = pd.to_numeric(rates["total_traffic_byte"], errors="coerce").fillna(0)
-    rates["total_traffic_gb"] = rates["total_traffic_bytes"] / 1024**3
+    rates["total_traffic_gb"] = rates["total_traffic_bytes"] / 1024 ** 3
 
     daily = (
         rates.groupby("date", dropna=False, as_index=False)
@@ -198,17 +218,6 @@ def save_outputs(df: pd.DataFrame, summary_df: pd.DataFrame, output_dir: Path, b
     return [excel_path, csv_path, summary_path]
 
 
-def load_existing_dataframe(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        return pd.DataFrame()
-    suffix = path.suffix.lower()
-    if suffix == ".csv":
-        return pd.read_csv(path, encoding="utf-8-sig")
-    if suffix in {".xlsx", ".xlsm"}:
-        return pd.read_excel(path, engine="openpyxl")
-    return pd.DataFrame()
-
-
 def save_historical_archive(history_path: Path, top100_df: pd.DataFrame, metrics_df: pd.DataFrame) -> Path:
     history_path.parent.mkdir(parents=True, exist_ok=True)
     existing_top100 = load_existing_excel_sheet(history_path, "Top100")
@@ -220,8 +229,10 @@ def save_historical_archive(history_path: Path, top100_df: pd.DataFrame, metrics
     if not existing_metrics.empty and "date" in existing_metrics.columns:
         existing_metrics = existing_metrics[~existing_metrics["date"].astype(str).isin(date_values)]
 
-    merged_top100 = pd.concat([existing_top100, top100_df], ignore_index=True) if not existing_top100.empty else top100_df.copy()
-    merged_metrics = pd.concat([existing_metrics, metrics_df], ignore_index=True) if not existing_metrics.empty else metrics_df.copy()
+    merged_top100 = pd.concat([existing_top100, top100_df],
+                              ignore_index=True) if not existing_top100.empty else top100_df.copy()
+    merged_metrics = pd.concat([existing_metrics, metrics_df],
+                               ignore_index=True) if not existing_metrics.empty else metrics_df.copy()
 
     if not merged_top100.empty:
         merged_top100 = merged_top100.sort_values(["date", "total_traffic_bytes"], ascending=[False, False])
@@ -238,11 +249,11 @@ def save_historical_archive(history_path: Path, top100_df: pd.DataFrame, metrics
 
 
 def save_comprehensive_outputs(
-    top100_df: pd.DataFrame,
-    metrics_df: pd.DataFrame,
-    output_dir: Path,
-    base_name: str,
-    history_path: Path,
+        top100_df: pd.DataFrame,
+        metrics_df: pd.DataFrame,
+        output_dir: Path,
+        base_name: str,
+        history_path: Path,
 ) -> List[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / f"{base_name}_report.xlsx"
@@ -300,6 +311,16 @@ def safe_rmtree(path: Path, logger: logging.Logger) -> None:
     shutil.rmtree(path, onerror=onerror)
 
 
+def safe_extract_zip(archive: zipfile.ZipFile, destination: Path) -> None:
+    """Extract an archive only when every member stays within destination."""
+    destination = destination.resolve()
+    for member in archive.infolist():
+        target = (destination / member.filename).resolve()
+        if target != destination and destination not in target.parents:
+            raise ValueError(f"Unsafe ZIP member path: {member.filename}")
+    archive.extractall(destination)
+
+
 def process_zip_file(zip_path: Path, output_root: Path, history_path: Path, logger: logging.Logger) -> List[dict]:
     if not zip_path.stem.startswith(COMPREHENSIVE_PREFIX):
         logger.info(f"Skipping archive because it does not start with {COMPREHENSIVE_PREFIX}: {zip_path.name}")
@@ -315,10 +336,11 @@ def process_zip_file(zip_path: Path, output_root: Path, history_path: Path, logg
 
     logger.info(f"Extracting archive: {zip_path}")
     with zipfile.ZipFile(zip_path, "r") as archive:
-        archive.extractall(extract_dir)
+        safe_extract_zip(archive, extract_dir)
 
     data_files = sorted(
-        [p for p in extract_dir.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS and p.stem.startswith(COMPREHENSIVE_PREFIX)],
+        [p for p in extract_dir.rglob("*") if
+         p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS and p.stem.startswith(COMPREHENSIVE_PREFIX)],
         key=lambda p: p.stat().st_size,
         reverse=True,
     )
@@ -340,18 +362,24 @@ def discover_files(input_dir: Path) -> List[Path]:
     if not input_dir.exists():
         return []
 
-    candidates = [
-        p
-        for p in input_dir.iterdir()
-        if p.is_file()
-        and p.stem.startswith(COMPREHENSIVE_PREFIX)
-        and (p.suffix.lower() == ".zip" or p.suffix.lower() in SUPPORTED_EXTENSIONS)
-    ]
+    # Look for ZIP files and supported files starting with Comprehensive_Analysis
+    candidates = []
+
+    # Check for ZIP files
+    for p in input_dir.iterdir():
+        if p.is_file() and p.suffix.lower() == ".zip" and p.stem.startswith(COMPREHENSIVE_PREFIX):
+            candidates.append(p)
+
+    # Check for supported files (CSV, Excel)
+    for p in input_dir.iterdir():
+        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS and p.stem.startswith(COMPREHENSIVE_PREFIX):
+            candidates.append(p)
+
     if not candidates:
         return []
 
-    latest = max(candidates, key=lambda p: p.stat().st_mtime)
-    return [latest]
+    # Return all found files, sorted by modification time (newest first)
+    return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def write_manifest(output_root: Path, processed_files: List[dict]) -> None:
@@ -368,14 +396,22 @@ def run(input_dir: Path, output_root: Path, history_path: Path, logger: logging.
     files = discover_files(input_dir)
     processed_results: List[dict] = []
 
+    if not files:
+        logger.warning(f"No Comprehensive_Analysis files found in {input_dir}")
+        return processed_results
+
+    logger.info(f"Found {len(files)} file(s) to process")
+
     for file_path in files:
+        logger.info(f"Processing: {file_path.name}")
         if file_path.suffix.lower() == ".zip":
             results = process_zip_file(file_path, output_root, history_path, logger)
             processed_results.extend(results)
         elif file_path.suffix.lower() in SUPPORTED_EXTENSIONS:
             per_file_output_dir = output_root / "processed" / file_path.stem
             result = process_data_file(file_path, per_file_output_dir, history_path, logger)
-            processed_results.append(result)
+            if result:
+                processed_results.append(result)
         else:
             logger.info(f"Skipping unsupported file: {file_path}")
 
@@ -387,34 +423,46 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Process downloaded ZIP/Excel/CSV files into analysis reports")
     parser.add_argument(
         "--source-dir",
-        default=str(Path.home() / "Downloads"),
-        help="Folder to scan for new downloads (default: your Downloads folder)",
+        default=str(ANALYSIS_SOURCE_DIR),
+        help=f"Folder to scan for new downloads (default: {ANALYSIS_SOURCE_DIR})",
     )
     parser.add_argument(
         "--output-dir",
-        default=str(Path.home() / "Downloads" / "Processed_Analysis"),
-        help="Folder where processed files and reports will be written",
+        default=str(ANALYSIS_OUTPUT_DIR),
+        help=f"Folder where processed files and reports will be written (default: {ANALYSIS_OUTPUT_DIR})",
     )
     parser.add_argument(
         "--history-file",
-        default=str(Path.home() / "Downloads" / "Processed_Analysis" / "Comprehensive_Analysis_Historical.xlsx"),
-        help="One combined historical archive spreadsheet",
+        default=str(ANALYSIS_HISTORY_FILE),
+        help=f"One combined historical archive spreadsheet (default: {ANALYSIS_HISTORY_FILE})",
     )
     return parser.parse_args()
+
+
+def ensure_directories():
+    """Ensure all required directories exist."""
+    ANALYSIS_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+    ANALYSIS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    ANALYSIS_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> int:
     args = parse_args()
     logger = setup_logger()
+
+    # Ensure directories exist
+    ensure_directories()
+
     source_dir = Path(args.source_dir).expanduser().resolve()
     output_dir = Path(args.output_dir).expanduser().resolve()
     history_file = Path(args.history_file).expanduser().resolve()
 
-    logger.info(f"Scanning {source_dir}")
-    logger.info(f"Writing reports to {output_dir}")
-    logger.info(f"Using historical archive: {history_file}")
+    logger.info(f"📂 Scanning source: {source_dir}")
+    logger.info(f"📁 Writing reports to: {output_dir}")
+    logger.info(f"📄 Using historical archive: {history_file}")
+
     run(source_dir, output_dir, history_file, logger)
-    logger.info("Processing complete")
+    logger.info("✅ Processing complete")
     return 0
 
 

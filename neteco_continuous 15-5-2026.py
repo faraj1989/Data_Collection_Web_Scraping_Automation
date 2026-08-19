@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import socket
 import time
@@ -7,10 +8,17 @@ from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 from project_config import env_int, env_path_str, env_str
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # ================== USER CONFIGURATION =====================
 USERNAME = env_str("NETECO_USERNAME")
@@ -21,7 +29,7 @@ DOWNLOAD_DIR = env_path_str("NETECO_DOWNLOAD_DIR", os.path.join(os.path.expandus
 EXPORT_BASE_DIR = env_path_str("NETECO_EXPORT_BASE_DIR", r"C:\Current_Alarms")
 
 WAIT_TIMEOUT = env_int("NETECO_WAIT_TIMEOUT", 60)
-INTERVAL_SECONDS = env_int("NETECO_INTERVAL_SECONDS", 300)  # 5 minutes between export attempts.
+INTERVAL_SECONDS = env_int("NETECO_INTERVAL_SECONDS", 300)
 DOWNLOAD_TIMEOUT_SECONDS = env_int("NETECO_DOWNLOAD_TIMEOUT_SECONDS", 180)
 DOWNLOAD_STABLE_SECONDS = env_int("NETECO_DOWNLOAD_STABLE_SECONDS", 5)
 RETRY_DELAY_SECONDS = env_int("NETECO_RETRY_DELAY_SECONDS", 60)
@@ -29,6 +37,28 @@ MAX_CONSECUTIVE_FAILURES = env_int("NETECO_MAX_CONSECUTIVE_FAILURES", 5)
 PORT_CHECK_TIMEOUT = env_int("NETECO_PORT_CHECK_TIMEOUT", 5)
 
 TEMP_DOWNLOAD_EXTENSIONS = (".crdownload", ".tmp", ".partial")
+
+
+# ========== ENSURE DIRECTORIES EXIST ==========
+def ensure_dir(path):
+    """Create directory if it doesn't exist."""
+    if not path:
+        return path
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+        print(f"📁 Created directory: {path}")
+    return path
+
+
+# Create directories before proceeding
+DOWNLOAD_DIR = ensure_dir(DOWNLOAD_DIR)
+EXPORT_BASE_DIR = ensure_dir(EXPORT_BASE_DIR)
+
+# ========== ERROR SCREENSHOT DIRECTORY ==========
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+ERROR_SCREENSHOT_DIR = ensure_dir(os.path.join(DATA_ROOT, "Errors"))
+
+# =====================================================
 
 if not USERNAME or not PASSWORD or not URL:
     raise RuntimeError(
@@ -121,11 +151,22 @@ def wait_for_download(download_dir, before_files, timeout=DOWNLOAD_TIMEOUT_SECON
     return None
 
 
-def init_driver():
+def create_driver():
+    """Create Chrome driver with proper options - FIXED to match MAE scraper."""
+    global driver
+
+    try:
+        driver.quit()
+    except Exception:
+        pass
+
+    log("Starting Chrome...")
+
     chrome_options = Options()
     chrome_options.set_capability("acceptInsecureCerts", True)
     chrome_options.page_load_strategy = "eager"
 
+    # Same as MAE scraper - working options
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-insecure-localhost")
     chrome_options.add_argument("--allow-running-insecure-content")
@@ -145,17 +186,29 @@ def init_driver():
         },
     )
 
-    log("Starting Chrome...")
-    driver = webdriver.Chrome(options=chrome_options)
-    driver.execute_cdp_cmd(
-        "Page.setDownloadBehavior",
-        {
-            "behavior": "allow",
-            "downloadPath": DOWNLOAD_DIR,
-        },
-    )
-    driver.set_page_load_timeout(WAIT_TIMEOUT)
-    return driver
+    try:
+        # Try webdriver_manager first (same as MAE scraper)
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        log(f"✅ Chrome started with ChromeDriver: {service.path}")
+
+        # Print versions (like MAE scraper)
+        caps = driver.capabilities
+        browser_version = caps.get("browserVersion") or caps.get("version")
+        log(f"🔧 Browser version: {browser_version}")
+
+        driver.set_page_load_timeout(WAIT_TIMEOUT)
+        return driver
+
+    except Exception as e:
+        log(f"❌ Failed to start Chrome with webdriver_manager: {e}")
+        log("   Trying fallback with Selenium Manager...")
+
+        # Fallback: Let Selenium Manager handle it
+        driver = webdriver.Chrome(options=chrome_options)
+        log(f"✅ Chrome started with Selenium Manager")
+        driver.set_page_load_timeout(WAIT_TIMEOUT)
+        return driver
 
 
 def login_and_navigate(driver):
@@ -236,7 +289,7 @@ def run_export_sequence(driver):
         return False
 
     dest_dir = os.path.join(EXPORT_BASE_DIR, time.strftime("%Y-%m-%d"))
-    os.makedirs(dest_dir, exist_ok=True)
+    dest_dir = ensure_dir(dest_dir)
 
     extension = os.path.splitext(downloaded_file)[1]
     new_name = f"CurrentAlarms_NetEco_{time.strftime('%Y%m%d_%H%M%S')}{extension}"
@@ -279,7 +332,7 @@ def main():
                 if not wait_until_url_port_is_open(URL):
                     raise ConnectionError(f"Target is not reachable before opening Chrome: {URL}")
 
-                driver = init_driver()
+                driver = create_driver()
                 login_and_navigate(driver)
 
             log("Starting export cycle...")
@@ -295,6 +348,17 @@ def main():
             consecutive_failures += 1
             log(f"Error occurred: {exc}")
             log(f"Failure {consecutive_failures}/{MAX_CONSECUTIVE_FAILURES}.")
+
+            # Save screenshot to Errors folder
+            try:
+                if driver:
+                    screenshot_path = os.path.join(ERROR_SCREENSHOT_DIR,
+                                                   f"neteco_error_{time.strftime('%Y%m%d_%H%M%S')}.png")
+                    driver.save_screenshot(screenshot_path)
+                    log(f"📸 Screenshot saved as: {screenshot_path}")
+            except Exception as screenshot_error:
+                log(f"⚠️ Screenshot failed: {screenshot_error}")
+
             close_driver(driver)
             driver = None
 

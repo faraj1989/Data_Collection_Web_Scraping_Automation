@@ -1,18 +1,16 @@
 import argparse
 import glob
-import logging
 import os
 import shutil
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 
 from project_config import env_int, env_path_str, env_str, load_env_file
-from project_logging import setup_logger
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -21,14 +19,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 
 load_env_file()
-logger = setup_logger("smartcare-cem")
-
-
-def print(*args, sep=" ", end="\n", **kwargs):
-    message = sep.join(str(arg) for arg in args)
-    if message.endswith("\n"):
-        message = message[:-1]
-    logger.info(message)
 
 # --- Portal Core Configuration ---
 LOGIN_URL = env_str("SMARTCARE_LOGIN_URL", "https://10.171.200.52:38443/")
@@ -47,41 +37,28 @@ DOWNLOAD_DIR = env_path_str("SMARTCARE_DOWNLOAD_DIR", str(Path.home() / "Downloa
 OUTPUT_DIR = env_path_str("SMARTCARE_OUTPUT_DIR", str(Path.home() / "Downloads" / "SmartCare_Exports"))
 EXPORT_TASK_TIMEOUT = env_int("SMARTCARE_EXPORT_TASK_TIMEOUT", 300)
 POLL_INTERVAL = env_int("SMARTCARE_POLL_INTERVAL", 15)
-BROWSER_TIMEOUT = env_int("SMARTCARE_BROWSER_TIMEOUT", 45)
 
 
-def init_driver(download_dir: Path):
-    """Initializes Chrome with download handling and safer browser options."""
-    os.makedirs(download_dir, exist_ok=True)
-
+def init_driver():
+    """Initializes Chrome and explicitly allows downloads to the target folder."""
     chrome_options = Options()
-    chrome_options.set_capability("acceptInsecureCerts", True)
-    chrome_options.page_load_strategy = "eager"
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-insecure-localhost")
-    chrome_options.add_argument("--allow-running-insecure-content")
-    chrome_options.add_argument("--allow-legacy-insecure-renegotiation")
-    chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument("--disable-dev-shm-usage")
 
     prefs = {
-        "download.default_directory": str(download_dir),
+        "download.default_directory": DOWNLOAD_DIR,
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
-        "profile.default_content_setting_values.automatic_downloads": 1,
-        "profile.default_content_settings.popups": 0,
         "safebrowsing.enabled": True,
-        "safebrowsing.disable_download_protection": False,
     }
     chrome_options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(options=chrome_options)
     driver.execute_cdp_cmd(
         "Page.setDownloadBehavior",
-        {"behavior": "allow", "downloadPath": str(download_dir)},
+        {"behavior": "allow", "downloadPath": DOWNLOAD_DIR},
     )
-    driver.set_page_load_timeout(BROWSER_TIMEOUT)
-    driver.set_script_timeout(BROWSER_TIMEOUT)
+    driver.maximize_window()
     return driver
 
 
@@ -103,7 +80,6 @@ def snapshot_download_dir(directory, patterns=None):
 
 def wait_for_new_download(directory, snapshot_before_click, timeout=120, expected_task_name=None):
     """Wait for a new or updated file to finish downloading."""
-    directory = Path(directory)
     print(f"Watching download folder for new file: {directory}")
     deadline = time.time() + timeout
     expected_task_name = (expected_task_name or "").strip().lower()
@@ -555,7 +531,7 @@ def click_task_to_download(driver, latest_task):
         return False
 
 
-def find_and_download_task(driver, wait, download_dir: Path, output_dir: Path, timeout=EXPORT_TASK_TIMEOUT):
+def find_and_download_task(driver, wait, timeout=EXPORT_TASK_TIMEOUT):
     """Find and download the latest export task from the Async Export page."""
     print(f"\n--- STEP 9: Async Export Task Manager ---")
 
@@ -647,20 +623,18 @@ def find_and_download_task(driver, wait, download_dir: Path, output_dir: Path, t
                 return False
 
     # Now click the task to download
-    pre_existing = snapshot_download_dir(download_dir)
+    pre_existing = snapshot_download_dir(DOWNLOAD_DIR)
 
     if click_task_to_download(driver, latest_task):
         # Wait for the download
         downloaded_path = wait_for_new_download(
-            download_dir,
+            DOWNLOAD_DIR,
             pre_existing,
             timeout=120,
             expected_task_name=latest_task['task_name'],
         )
 
         if downloaded_path:
-            if output_dir and output_dir != download_dir:
-                downloaded_path = move_downloaded_file(downloaded_path, output_dir)
             print(f"\nDownloaded file: {downloaded_path}")
             return True
 
@@ -671,110 +645,42 @@ def find_and_download_task(driver, wait, download_dir: Path, output_dir: Path, t
         return False
 
 
-def move_downloaded_file(downloaded_path: str, output_dir: Path) -> Path:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    source_path = Path(downloaded_path)
-    destination = output_dir / source_path.name
-    if destination.exists():
-        destination = output_dir / f"{source_path.stem}_{int(time.time())}{source_path.suffix}"
-    try:
-        shutil.move(str(source_path), str(destination))
-        print(f"Moved downloaded file to: {destination}")
-        return destination
-    except Exception as exc:
-        print(f"[WARN] Could not move downloaded file: {exc}")
-        return source_path
-
-
 def parse_args():
-    parser = argparse.ArgumentParser(description="SmartCare CEM export automation")
-    parser.add_argument(
-        "--download-dir",
-        help="Folder where browser downloads are saved",
-        default=None,
-    )
-    parser.add_argument(
-        "--output-dir",
-        help="Folder where completed exports are moved",
-        default=None,
-    )
-    parser.add_argument(
-        "--login-attempts",
-        type=int,
-        default=2,
-        help="Number of times to retry login before failing",
-    )
+    parser = argparse.ArgumentParser(description="Export SmartCare data for the analysis pipeline")
+    parser.add_argument("--download-dir", default=DOWNLOAD_DIR)
+    parser.add_argument("--output-dir", default=OUTPUT_DIR)
+    parser.add_argument("--login-attempts", type=int, default=1,
+                        help="Accepted for wrapper compatibility; portal retries are handled by Selenium.")
     return parser.parse_args()
 
 
-def already_ran_yesterday(output_dir: Path) -> bool:
-    if not output_dir.exists():
-        return False
-    yesterday = (datetime.now() - timedelta(days=1)).date()
-    for path in output_dir.iterdir():
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in {".xlsx", ".xls", ".csv", ".zip"}:
-            continue
-        try:
-            modified_date = datetime.fromtimestamp(path.stat().st_mtime).date()
-        except OSError:
-            continue
-        if modified_date == yesterday:
-            return True
-    return False
-
-
-def smartcare_automation(download_dir: Path = None, output_dir: Path = None, login_attempts: int = 2):
+def smartcare_automation(download_dir=None, output_dir=None):
     """Main automation function."""
-    download_dir = Path(download_dir or DOWNLOAD_DIR)
-    output_dir = Path(output_dir or OUTPUT_DIR)
-
-    if already_ran_yesterday(output_dir):
-        print(f"SmartCare export folder already contains a file from yesterday: {output_dir}")
-        return True
-
-    driver = None
-    attempts = 0
-    while attempts < login_attempts:
-        attempts += 1
-        try:
-            driver = init_driver(download_dir)
-            wait = WebDriverWait(driver, 45)
-            print(f"Connecting to login page: {LOGIN_URL} (attempt {attempts}/{login_attempts})")
-            driver.get(LOGIN_URL)
-
-            username_field = wait.until(EC.presence_of_element_located((By.ID, "username")))
-            username_field.clear()
-            username_field.send_keys(USERNAME)
-
-            password_field = driver.find_element(By.ID, "password")
-            password_field.clear()
-            password_field.send_keys(PASSWORD)
-
-            print("Submitting login credentials...")
-            driver.find_element(By.ID, "loginButton").click()
-            wait.until(EC.url_contains("homepage.html"))
-            print("Base authentication successful.")
-            break
-        except Exception as e:
-            print(f"[WARN] Login attempt {attempts} failed: {e}")
-            if driver:
-                try:
-                    driver.quit()
-                except Exception:
-                    pass
-            if attempts >= login_attempts:
-                print("[ERROR] Maximum login attempts reached.")
-                return False
-            print("Retrying login...")
-            time.sleep(5)
-
-    if driver is None:
-        print("[ERROR] Failed to create browser session for login.")
-        return False
+    global DOWNLOAD_DIR, OUTPUT_DIR
+    DOWNLOAD_DIR = str(Path(download_dir or DOWNLOAD_DIR).expanduser().resolve())
+    OUTPUT_DIR = str(Path(output_dir or OUTPUT_DIR).expanduser().resolve())
+    Path(DOWNLOAD_DIR).mkdir(parents=True, exist_ok=True)
+    Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    driver = init_driver()
+    wait = WebDriverWait(driver, 45)
 
     try:
+        print(f"Connecting to login page: {LOGIN_URL}")
+        driver.get(LOGIN_URL)
+
+        username_field = wait.until(EC.presence_of_element_located((By.ID, "username")))
+        username_field.clear()
+        username_field.send_keys(USERNAME)
+
+        password_field = driver.find_element(By.ID, "password")
+        password_field.clear()
+        password_field.send_keys(PASSWORD)
+
+        print("Submitting login credentials...")
+        driver.find_element(By.ID, "loginButton").click()
+        wait.until(EC.url_contains("homepage.html"))
+        print("Base authentication successful.")
+
         print("Routing directly to MBB Traffic Analysis section...")
         driver.get(TARGET_DASHBOARD_URL)
         time.sleep(10)
@@ -843,31 +749,35 @@ def smartcare_automation(download_dir: Path = None, output_dir: Path = None, log
         wait = WebDriverWait(driver, 45)
 
         # Find and download the task
-        success = find_and_download_task(driver, wait, download_dir, output_dir)
+        downloaded_path = find_and_download_task(driver, wait)
 
-        if success:
-            print("\nAutomation complete. File detected in the download folder.")
-            return True
+        if downloaded_path:
+            source = Path(downloaded_path)
+            destination = Path(OUTPUT_DIR) / source.name
+            if source.resolve() != destination.resolve():
+                if destination.exists():
+                    destination = destination.with_name(
+                        f"{destination.stem}_{datetime.now():%Y%m%d_%H%M%S}{destination.suffix}"
+                    )
+                shutil.move(str(source), str(destination))
+            print(f"\nAutomation complete. File moved to: {destination}")
+        else:
+            print("\n[WARN] Automation finished but the file may not have downloaded. Check the browser window.")
+            print("[INFO] Holding browser open for 5 minutes for manual inspection...")
+            time.sleep(300)
 
-        print("\n[WARN] Automation finished but the file may not have downloaded. Check the browser window.")
-        print("[INFO] Holding browser open for 5 minutes for manual inspection...")
-        time.sleep(300)
-        return False
     except Exception as e:
         print(f"\n[CRITICAL ERROR] Automation sequence broken: {e}")
         import traceback
         traceback.print_exc()
         print("[INFO] Holding browser open for 5 minutes for manual inspection...")
         time.sleep(300)
-        return False
+
     finally:
         print("Closing browser session.")
-        if driver:
-            driver.quit()
+        driver.quit()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    download_dir = Path(args.download_dir).expanduser().resolve() if args.download_dir else None
-    output_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else None
-    smartcare_automation(download_dir, output_dir)
+    smartcare_automation(args.download_dir, args.output_dir)

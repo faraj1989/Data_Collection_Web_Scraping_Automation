@@ -1,9 +1,33 @@
+import argparse  # <-- ADD THIS IMPORT
 import pandas as pd
 import re
 import os
 import shutil
 from io import StringIO
+
 from datetime import datetime
+from pathlib import Path
+from project_config import load_env_file
+
+load_env_file()
+
+# =============================================================
+# CENTRALIZED DIRECTORIES (from GUI)
+# =============================================================
+DATA_ROOT = Path(os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data"))
+
+# PS Traffic paths
+PS_TRAFFIC_SOURCE_DIR = Path(os.environ.get("PS_TRAFFIC_SOURCE_DIR", DATA_ROOT / "Subscribers" / "Raw Data"))
+PS_TRAFFIC_OUTPUT_DIR = Path(os.environ.get("PS_TRAFFIC_OUTPUT_DIR", DATA_ROOT / "PS_Traffic_Output"))
+PS_TRAFFIC_HISTORY_DIR = PS_TRAFFIC_OUTPUT_DIR / "Historical_Archive"
+
+# Ensure directories exist
+PS_TRAFFIC_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+PS_TRAFFIC_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+PS_TRAFFIC_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# =============================================================
 
 
 def clean_csv_content(file_content):
@@ -617,33 +641,35 @@ def save_to_excel(combined_df, reports, output_path):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Process PS Traffic raw exports into combined traffic reports")
-    parser.add_argument("--base-dir", type=str, default=None, help="Base folder containing dated raw data folders")
-    parser.add_argument("--date", type=str, default=None, help="Date folder name in YYYYMMDD format")
-    parser.add_argument("--output-dir", type=str, default=None, help="Output folder for saved reports")
-    parser.add_argument("--archive-dir", type=str, default=None, help="Archive folder for historical output")
+    parser.add_argument("--base-dir", type=str, default=str(PS_TRAFFIC_SOURCE_DIR),
+                        help="Base folder containing dated raw data folders")
+    parser.add_argument("--date", type=str, default=None,
+                        help="Date folder name in YYYYMMDD format")
+    parser.add_argument("--output-dir", type=str, default=str(PS_TRAFFIC_OUTPUT_DIR),
+                        help="Output folder for saved reports")
+    parser.add_argument("--archive-dir", type=str, default=str(PS_TRAFFIC_HISTORY_DIR),
+                        help="Archive folder for historical output")
     return parser.parse_args()
 
 
-def main(date_folder=None, output_folder=None, archive_dir=None):
+def main():
     """
     Main function to process PS Daily Traffic files from unzipped folder.
     """
-    if date_folder is None:
-        args = parse_args()
-        base_dir = Path(args.base_dir) if args.base_dir else Path(__file__).resolve().parent.parent / "Subscribers" / "Raw Data"
-        date_str = args.date if args.date else datetime.now().strftime("%Y%m%d")
-        date_folder = base_dir / date_str
-        output_folder = Path(args.output_dir) if args.output_dir else date_folder / "output"
-        archive_dir = Path(args.archive_dir) if args.archive_dir else Path(args.base_dir or Path(__file__).resolve().parent.parent / "Subscribers" / "Raw Data") / "Historical_Archive"
-    else:
-        date_folder = Path(date_folder)
-        output_folder = Path(output_folder) if output_folder else date_folder / "output"
-        archive_dir = Path(archive_dir) if archive_dir else date_folder.parent / "Historical_Archive"
+    args = parse_args()
+
+    base_dir = Path(args.base_dir)
+    date_str = args.date if args.date else datetime.now().strftime("%Y%m%d")
+    date_folder = base_dir / date_str
+    output_folder = Path(args.output_dir) if args.output_dir else date_folder / "output"
+    archive_dir = Path(args.archive_dir) if args.archive_dir else PS_TRAFFIC_HISTORY_DIR
 
     print("=" * 60)
-    print("Processing PS Daily Traffic Files")
+    print("📊 PS Traffic Processing")
     print("=" * 60)
     print(f"📂 Date folder: {date_folder}")
+    print(f"📁 Output folder: {output_folder}")
+    print(f"📁 Archive folder: {archive_dir}")
 
     unzipped_folder = date_folder / "unzipped"
 
@@ -689,20 +715,18 @@ def main(date_folder=None, output_folder=None, archive_dir=None):
     reports = generate_summary_reports(combined_df)
 
     # Create output folder
-    output_folder = os.path.join(date_folder, "output")
-    os.makedirs(output_folder, exist_ok=True)
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     # Save to Excel with timestamp
     today_str = datetime.now().strftime("%Y-%m-%d")
     output_filename = f"PS_Traffic_Combined_Report_{today_str}.xlsx"
-    output_path = os.path.join(output_folder, output_filename)
+    output_path = output_folder / output_filename
 
     print(f"\n💾 Saving to Excel file: {output_path}")
     save_to_excel(combined_df, reports, output_path)
 
-    # ======================================================
-    # SAVE HISTORICAL ARCHIVE
-    # ======================================================
+    # Save historical archive
     print("\n📁 Creating historical archive...")
 
     # Determine date range for archive filename
@@ -717,10 +741,11 @@ def main(date_folder=None, output_folder=None, archive_dir=None):
         date_range = "nodata"
 
     # Create archive directory
-    archive_dir = os.path.join(os.path.dirname(date_folder), "Historical_Archive")
+    archive_dir = Path(archive_dir)
+    archive_dir.mkdir(parents=True, exist_ok=True)
 
     # Save to archive
-    archive_path, csv_path = save_historical_archive(combined_df, reports, archive_dir, date_range)
+    archive_path, csv_path = save_historical_archive(combined_df, reports, str(archive_dir), date_range)
 
     # Print statistics
     print("\n" + "=" * 60)

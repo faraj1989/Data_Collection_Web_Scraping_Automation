@@ -1,32 +1,26 @@
-# Python caches and build output
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-build/
-dist/
-*.egg-info/
-
-# Virtual environments
-.venv/
-venv/
-env/
-dashboard_env/
-
-# IDE/project-local files
-.idea/
-.vscode/
-
-# Local secrets and credentials
+# Secrets and machine-specific settings
 .env
 .env.*
-*.key
-*.pem
-Deepseek API.txt
+!.env.example
 TelegramBot_info.txt
 
-# Local logs/data exports
+# Python and IDE files
+.venv/
+__pycache__/
+*.py[cod]
+.idea/workspace.xml
+
+# Generated data, runtime logs, and packaging output
+logs/
+build/
+dist/
 *.log
-*.sqlite
-*.sqlite3
-*.db
+*.lock
+*.xlsx
+*.xlsm
+*.csv
+
+# Local screenshots and temporary extraction folders
+Errors/
+extracted/
+temp/
