@@ -15,8 +15,25 @@ from project_config import env_int, env_path
 # --- CONFIGURATION ---
 BASE_DIR = env_path("NOC_BASE_DIR", r"c:\Current_Alarms")
 SHARED_FOLDER = env_path("NOC_SHARED_FOLDER", BASE_DIR / "Shared Current Alarms")
-INTERVAL_SECONDS = env_int("MERGE_INTERVAL_SECONDS", 300)  #  i want i  5 minutes
+INTERVAL_SECONDS = env_int("MERGE_INTERVAL_SECONDS", 300)  # 5 minutes
 
+
+# ========== ENSURE DIRECTORIES EXIST ==========
+def ensure_dir(path):
+    """Create directory if it doesn't exist."""
+    if not path:
+        return path
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+        print(f"📁 Created directory: {path}")
+    return path
+
+
+BASE_DIR = ensure_dir(BASE_DIR)
+SHARED_FOLDER = ensure_dir(SHARED_FOLDER)
+
+
+# =====================================================
 
 def get_latest_date_folder():
     date_folders = [
@@ -274,6 +291,8 @@ def apply_excel_formatting(output_path, df_final, df_metrics, df_neteco_sheet, d
 
 
 def process_latest_folder():
+    global SHARED_FOLDER  # <-- Add this line at the start
+
     latest_date_folder = get_latest_date_folder()
     if not latest_date_folder:
         print("ERROR: No dated folders found under c:\\Current_Alarms.")
@@ -308,7 +327,8 @@ def process_latest_folder():
     else:
         df_final["Mains Failure Time"] = df_final["Mains Failure Time"].fillna("-")
 
-    required_columns = ["Site Name", "MO Name", "Alarm Name", "Last Occurred", "Power Reason (NOC)", "Mains Failure Time"]
+    required_columns = ["Site Name", "MO Name", "Alarm Name", "Last Occurred", "Power Reason (NOC)",
+                        "Mains Failure Time"]
     for col in required_columns:
         if col not in df_final.columns:
             df_final[col] = "-"
@@ -327,7 +347,9 @@ def process_latest_folder():
 
     report_time = datetime.now().strftime("%H%M")
     output_path = latest_date_folder / f"Final_NOC_Report_{latest_date_folder.name}_{report_time}.xlsx"
-    SHARED_FOLDER.mkdir(parents=True, exist_ok=True)
+
+    # Ensure shared folder exists (using global)
+    SHARED_FOLDER = ensure_dir(SHARED_FOLDER)
     shared_output_path = SHARED_FOLDER / "Live_NOC_Report.xlsx"
 
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
@@ -356,7 +378,6 @@ def process_latest_folder():
 
     print(f"Done. Disconnected={count_disconnected}, Mains Failure={count_mains}")
     return True
-
 
 def main():
     print("NOC report processor is running.")

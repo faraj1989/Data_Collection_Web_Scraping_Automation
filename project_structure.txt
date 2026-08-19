@@ -1,0 +1,238 @@
+======================================================================
+📁 PROJECT STRUCTURE EXPORT
+📅 Generated: 2026-08-11 13:53:22
+📍 Root Path: C:\Users\user\Desktop\python\Automation-master
+======================================================================
+
+├── PS Traffic per site/
+│   ├── Combined_Traffic_Report.xlsx (335.93 KB)
+│   └── PS Traffic per site v3 .py (29.67 KB)
+├── Subscribers/
+│   └── Raw Data/
+│       ├── 20260712/
+│       │   ├── unzipped/
+│       │   └── zipped/
+│       ├── 20260713/
+│       │   ├── output/
+│       │   │   ├── Current_Week_Output_2026-07-13.xlsx (6.14 KB)
+│       │   │   └── Final_Output_2026-07-13.xlsx (6.14 KB)
+│       │   ├── unzipped/
+│       │   │   ├── 2G Monthly HQ interference_20260408134332-20260713015306/
+│       │   │   │   └── 2G Monthly HQ interference_20260408134332-20260713015306(2G).csv (9.32 MB)
+│       │   │   ├── 2G weekly HQ interference_20251117114706-20260713015550/
+│       │   │   │   └── 2G weekly HQ interference_20251117114706-20260713015550(2G).csv (1.37 MB)
+│       │   │   ├── 3G 4G Daily UL Interference_20251015141920-20260713010943/
+│       │   │   │   ├── 3G 4G Daily UL Interference_20251015141920-20260713010943(3G).csv (64.33 MB)
+│       │   │   │   └── 3G 4G Daily UL Interference_20251015141920-20260713010943(4G).csv (68.14 MB)
+│       │   │   ├── BSC6900_kpI_PACKETLOSS_20260415211312-20260713051548/
+│       │   │   │   └── BSC6900_kpI_PACKETLOSS_20260415211312-20260713051548.xlsx (4.21 MB)
+│       │   │   ├── BSC6900_with BTSNAME_20251018233053-20260713010117/
+│       │   │   │   └── BSC6900_with BTSNAME_20251018233053-20260713010117.xlsx (1.36 MB)
+│       │   │   ├── CS Roaming_1_20260408082907-20260713010041/
+│       │   │   │   └── CS Roaming_1_20260408082907-20260713010041(Subreport 1).csv (15.87 MB)
+│       │   │   ├── East Area GUL KPI Report for MySQL_20260406105834-20260713112541/
+│       │   │   │   ├── East Area GUL KPI Report for MySQL_20260406105834-20260713112541(2G).csv (154.29 MB)
+│       │   │   │   ├── East Area GUL KPI Report for MySQL_20260406105834-20260713112541(3G).csv (283.73 MB)
+│       │   │   │   ├── East Area GUL KPI Report for MySQL_20260406105834-20260713112541(3G NodeB level).csv (4.52 MB)
+│       │   │   │   └── East Area GUL KPI Report for MySQL_20260406105834-20260713112541(4G).csv (336.74 MB)
+│       │   │   ├── Libyana Cell info_HQ_ 2G_20250930130401-20260713021215/
+│       │   │   │   └── Libyana Cell info_HQ_ 2G_20250930130401-20260713021215.xlsx (273.29 KB)
+│       │   │   ├── Libyana Cell info_HQ_ 3G_20250930130446-20260713021301/
+│       │   │   │   └── Libyana Cell info_HQ_ 3G_20250930130446-20260713021301.xlsx (316.35 KB)
+│       │   │   ├── Libyana Cell info_HQ_ 4G_20250930130511-20260713041325/
+│       │   │   │   └── Libyana Cell info_HQ_ 4G_20250930130511-20260713041325.xlsx (433.75 KB)
+│       │   │   ├── MSC Server KPI_CS Subscribers_20260408083509-20260713050044/
+│       │   │   │   └── MSC Server KPI_CS Subscribers_20260408083509-20260713050044(Subreport 1).csv (114.71 KB)
+│       │   │   ├── MSC Server KPI_CS Subscribers_20260408083509-20260713050044 (1)/
+│       │   │   │   └── MSC Server KPI_CS Subscribers_20260408083509-20260713050044(Subreport 1).csv (114.71 KB)
+│       │   │   ├── PS Daily Traffic_2G_3G_4G_ L7D_20260615235036-20260713020135/
+│       │   │   │   ├── PS Daily Traffic_2G_3G_4G_ L7D_20260615235036-20260713020135(PS Traffic 2G).csv (328.37 KB)
+│       │   │   │   ├── PS Daily Traffic_2G_3G_4G_ L7D_20260615235036-20260713020135(PS Traffic 3G).csv (244.19 KB)
+│       │   │   │   └── PS Daily Traffic_2G_3G_4G_ L7D_20260615235036-20260713020135(PS Traffic 4G).csv (278.75 KB)
+│       │   │   ├── PS Daily Traffic_2G_3G_4G_ Last_Year_20260703184314-20260713004813/
+│       │   │   │   └── PS Daily Traffic_2G_3G_4G_ Last_Year_20260703184314-20260713004813.xlsx (10.34 KB)
+│       │   │   ├── PS Roaming users_20260413140246-20260713011221/
+│       │   │   │   └── PS Roaming users_20260413140246-20260713011221(Subreport 1).csv (11.00 MB)
+│       │   │   ├── PS users_2G_3G_4G_20251027093446-20260713003552/
+│       │   │   │   └── PS users_2G_3G_4G_20251027093446-20260713003552(Subreport 1).csv (44.21 KB)
+│       │   │   ├── Two weeks ago UMTS and LTE interference backup_20251015142010-20260713012833/
+│       │   │   │   ├── Two weeks ago UMTS and LTE interference backup_20251015142010-20260713012833(3G).csv (64.33 MB)
+│       │   │   │   └── Two weeks ago UMTS and LTE interference backup_20251015142010-20260713012833(4G).csv (68.14 MB)
+│       │   │   ├── VoLTE Key KPIs_daily whole network _faraj_20251109070655-20260713071531/
+│       │   │   │   └── VoLTE Key KPIs_daily whole network _faraj_20251109070655-20260713071531.xlsx (10.72 KB)
+│       │   │   ├── Whole Network Daily BH KPs template 14days ago_20250920193936-20260713020024/
+│       │   │   │   └── Whole Network Daily BH KPs template 14days ago_20250920193936-20260713020024.xlsx (10.93 KB)
+│       │   │   └── Whole Network Daily KPs template 14days ago_20251108230035-20260713000911/
+│       │   │       └── Whole Network Daily KPs template 14days ago_20251108230035-20260713000911.xlsx (10.14 KB)
+│       │   └── zipped/
+│       │       ├── 2G Monthly HQ interference_20260408134332-20260713015306.zip (1.58 MB)
+│       │       ├── 2G weekly HQ interference_20251117114706-20260713015550.zip (237.35 KB)
+│       │       ├── 3G 4G Daily UL Interference_20251015141920-20260713010943.zip (17.65 MB)
+│       │       ├── BSC6900_kpI_PACKETLOSS_20260415211312-20260713051548.zip (3.45 MB)
+│       │       ├── BSC6900_with BTSNAME_20251018233053-20260713010117.zip (1.05 MB)
+│       │       ├── CS Roaming_1_20260408082907-20260713010041.zip (1.49 MB)
+│       │       ├── East Area GUL KPI Report for MySQL_20260406105834-20260713112541.zip (305.93 MB)
+│       │       ├── Libyana Cell info_HQ_ 2G_20250930130401-20260713021215.zip (238.47 KB)
+│       │       ├── Libyana Cell info_HQ_ 3G_20250930130446-20260713021301.zip (234.03 KB)
+│       │       ├── Libyana Cell info_HQ_ 4G_20250930130511-20260713041325.zip (382.24 KB)
+│       │       ├── MSC Server KPI_CS Subscribers_20260408083509-20260713050044 (1).zip (31.68 KB)
+│       │       ├── MSC Server KPI_CS Subscribers_20260408083509-20260713050044.zip (31.68 KB)
+│       │       ├── PS Daily Traffic_2G_3G_4G_ L7D_20260615235036-20260713020135.zip (227.10 KB)
+│       │       ├── PS Daily Traffic_2G_3G_4G_ Last_Year_20260703184314-20260713004813.zip (9.22 KB)
+│       │       ├── PS Roaming users_20260413140246-20260713011221.zip (957.75 KB)
+│       │       ├── PS users_2G_3G_4G_20251027093446-20260713003552.zip (10.90 KB)
+│       │       ├── Two weeks ago UMTS and LTE interference backup_20251015142010-20260713012833.zip (17.65 MB)
+│       │       ├── VoLTE Key KPIs_daily whole network _faraj_20251109070655-20260713071531.zip (10.21 KB)
+│       │       ├── Whole Network Daily BH KPs template 14days ago_20250920193936-20260713020024.zip (10.26 KB)
+│       │       └── Whole Network Daily KPs template 14days ago_20251108230035-20260713000911.zip (9.46 KB)
+│       ├── 20260718/
+│       │   ├── unzipped/
+│       │   └── zipped/
+│       ├── 20260803/
+│       │   ├── output/
+│       │   │   └── Current_Week_Output_2026-08-03.xlsx (6.14 KB)
+│       │   ├── unzipped/
+│       │   │   ├── 2G Monthly HQ interference_20260408134332-20260803015306/
+│       │   │   │   └── 2G Monthly HQ interference_20260408134332-20260803015306(2G).csv (7.29 MB)
+│       │   │   ├── 2G weekly HQ interference_20251117114706-20260803015550/
+│       │   │   │   └── 2G weekly HQ interference_20251117114706-20260803015550(2G).csv (1.37 MB)
+│       │   │   ├── 3G 4G Daily UL Interference_20251015141920-20260803010943/
+│       │   │   │   ├── 3G 4G Daily UL Interference_20251015141920-20260803010943(3G).csv (64.11 MB)
+│       │   │   │   └── 3G 4G Daily UL Interference_20251015141920-20260803010943(4G).csv (66.60 MB)
+│       │   │   ├── 3GPythonAutoDailyEastH-20260803080001/
+│       │   │   │   └── 3GPythonAutoDailyEastH-20260803080001.xlsx (1.02 MB)
+│       │   │   ├── 4G Daily Report East NW 2-20260803080000/
+│       │   │   │   ├── 4G Daily Report East NW 2-20260803080000(BH KPIs).csv (2.52 KB)
+│       │   │   │   ├── 4G Daily Report East NW 2-20260803080000(Daily Traffic).csv (1.32 KB)
+│       │   │   │   └── 4G Daily Report East NW 2-20260803080000(Subreport 2).csv (28.65 MB)
+│       │   │   ├── 4GPythonAutoDailyEast-20260803080000/
+│       │   │   │   └── 4GPythonAutoDailyEast-20260803080000.xlsx (941.98 KB)
+│       │   │   ├── BSC6900 KPI_20250515092004-20260803050000/
+│       │   │   │   └── BSC6900 KPI_20250515092004-20260803050000(Subreport 1).csv (50.29 MB)
+│       │   │   ├── BSC6900_with BTSNAME_20251018233053-20260803010117/
+│       │   │   │   └── BSC6900_with BTSNAME_20251018233053-20260803010117.xlsx (1.38 MB)
+│       │   │   ├── Core CS Users-20260803080500/
+│       │   │   │   └── Core CS Users-20260803080500.xlsx (44.94 KB)
+│       │   │   ├── Core PS Users-20260803080500/
+│       │   │   │   └── Core PS Users-20260803080500.xlsx (13.62 KB)
+│       │   │   ├── Core VoLTE Users-20260803080500/
+│       │   │   │   └── Core VoLTE Users-20260803080500.xlsx (35.13 KB)
+│       │   │   ├── CS Roaming-20260803080000/
+│       │   │   │   └── CS Roaming-20260803080000.xlsx (2.26 MB)
+│       │   │   ├── CS Roaming_1_20260408082907-20260803010041/
+│       │   │   │   └── CS Roaming_1_20260408082907-20260803010041(Subreport 1).csv (16.59 MB)
+│       │   │   ├── Gosail GUL Availability Report-20260803080000/
+│       │   │   │   └── Gosail GUL Availability Report-20260803080000.xlsx (770.77 KB)
+│       │   │   ├── Libyana Cell info_HQ_ 2G_20250930130401-20260803021215/
+│       │   │   │   └── Libyana Cell info_HQ_ 2G_20250930130401-20260803021215.xlsx (273.57 KB)
+│       │   │   ├── Libyana Cell info_HQ_ 3G_20250930130446-20260803021301/
+│       │   │   │   └── Libyana Cell info_HQ_ 3G_20250930130446-20260803021301.xlsx (316.50 KB)
+│       │   │   ├── Libyana Cell info_HQ_ 4G_20250930130511-20260803041325/
+│       │   │   │   └── Libyana Cell info_HQ_ 4G_20250930130511-20260803041325.xlsx (461.98 KB)
+│       │   │   ├── LTE whole network KPI Report_daily_City_30Days-20260803080000/
+│       │   │   │   └── LTE whole network KPI Report_daily_City_30Days-20260803080000.xlsx (56.29 KB)
+│       │   │   ├── Maximum Attach user per TAI-20260803080000/
+│       │   │   │   └── Maximum Attach user per TAI-20260803080000.xlsx (127.10 KB)
+│       │   │   ├── MSC Server KPI-20260803080000/
+│       │   │   │   └── MSC Server KPI-20260803080000.xlsx (84.75 KB)
+│       │   │   ├── MSC Server KPI_20250515092052-20260803050000/
+│       │   │   │   └── MSC Server KPI_20250515092052-20260803050000.xlsx (84.27 KB)
+│       │   │   ├── MSC Server KPI_CS Subscribers_20260408083509-20260803050044/
+│       │   │   │   └── MSC Server KPI_CS Subscribers_20260408083509-20260803050044(Subreport 1).csv (130.82 KB)
+│       │   │   ├── PS Daily Traffic_2G_3G_4G_ Last_Year_20260703184314-20260803004813/
+│       │   │   │   └── PS Daily Traffic_2G_3G_4G_ Last_Year_20260703184314-20260803004813.xlsx (10.33 KB)
+│       │   │   ├── PS Roaming users_20260413140246-20260803011221/
+│       │   │   │   └── PS Roaming users_20260413140246-20260803011221(Subreport 1).csv (11.00 MB)
+│       │   │   ├── PS users_2G_3G_4G_20251027093446-20260803003552/
+│       │   │   │   └── PS users_2G_3G_4G_20251027093446-20260803003552(Subreport 1).csv (44.25 KB)
+│       │   │   ├── pythonAutoEastHGDaily-20260803080000/
+│       │   │   │   └── pythonAutoEastHGDaily-20260803080000.xlsx (2.52 MB)
+│       │   │   ├── Roaming users-20260803080000/
+│       │   │   │   └── Roaming users-20260803080000.xlsx (1.62 MB)
+│       │   │   ├── TRIPOLIPS CS Daily Traffic per site_2G_3G_4G_20260728104208-20260803001908/
+│       │   │   │   ├── TRIPOLIPS CS Daily Traffic per site_2G_3G_4G_20260728104208-20260803001908(PS CS Traffic 2G).csv (1.72 MB)
+│       │   │   │   ├── TRIPOLIPS CS Daily Traffic per site_2G_3G_4G_20260728104208-20260803001908(PS CS Traffic 3G).csv (282.88 KB)
+│       │   │   │   └── TRIPOLIPS CS Daily Traffic per site_2G_3G_4G_20260728104208-20260803001908(PS CS Traffic 4G).csv (270.60 KB)
+│       │   │   ├── Two weeks ago UMTS and LTE interference backup_20251015142010-20260803012833/
+│       │   │   │   ├── Two weeks ago UMTS and LTE interference backup_20251015142010-20260803012833(3G).csv (64.11 MB)
+│       │   │   │   └── Two weeks ago UMTS and LTE interference backup_20251015142010-20260803012833(4G).csv (66.60 MB)
+│       │   │   ├── VoLTE Key KPIs_daily whole network _faraj_20251109070655-20260803071531/
+│       │   │   │   └── VoLTE Key KPIs_daily whole network _faraj_20251109070655-20260803071531.xlsx (10.74 KB)
+│       │   │   ├── VoLTE_KPIs-20260803080000/
+│       │   │   │   └── VoLTE_KPIs-20260803080000.xlsx (5.52 KB)
+│       │   │   ├── vUGW KPI-20260803080500/
+│       │   │   │   └── vUGW KPI-20260803080500.xlsx (80.31 KB)
+│       │   │   ├── vUGW KPI_20250515092123-20260803050000/
+│       │   │   │   └── vUGW KPI_20250515092123-20260803050000.xlsx (80.32 KB)
+│       │   │   ├── vUSN KPI-20260803080500/
+│       │   │   │   └── vUSN KPI-20260803080500.xlsx (11.31 KB)
+│       │   │   ├── vUSN KPI_20250515092144-20260803050000/
+│       │   │   │   └── vUSN KPI_20250515092144-20260803050000.xlsx (11.31 KB)
+│       │   │   └── Whole Network Daily BH KPs template 14days ago_20250920193936-20260803020024/
+│       │   │       └── Whole Network Daily BH KPs template 14days ago_20250920193936-20260803020024.xlsx (10.98 KB)
+│       │   └── zipped/
+│       │       ├── 2G Monthly HQ interference_20260408134332-20260803015306.zip (1.25 MB)
+│       │       ├── 2G weekly HQ interference_20251117114706-20260803015550.zip (241.50 KB)
+│       │       ├── 3G 4G Daily UL Interference_20251015141920-20260803010943.zip (17.32 MB)
+│       │       ├── 3GPythonAutoDailyEastH-20260803080001.zip (960.21 KB)
+│       │       ├── 4G Daily Report East NW 2-20260803080000.zip (2.50 MB)
+│       │       ├── 4GPythonAutoDailyEast-20260803080000.zip (899.98 KB)
+│       │       ├── BSC6900 KPI_20250515092004-20260803050000.zip (4.84 MB)
+│       │       ├── BSC6900_with BTSNAME_20251018233053-20260803010117.zip (1.13 MB)
+│       │       ├── Core CS Users-20260803080500.zip (30.05 KB)
+│       │       ├── Core PS Users-20260803080500.zip (11.70 KB)
+│       │       ├── Core VoLTE Users-20260803080500.zip (20.84 KB)
+│       │       ├── CS Roaming-20260803080000.zip (1.87 MB)
+│       │       ├── CS Roaming_1_20260408082907-20260803010041.zip (1.56 MB)
+│       │       ├── Gosail GUL Availability Report-20260803080000.zip (709.42 KB)
+│       │       ├── Libyana Cell info_HQ_ 2G_20250930130401-20260803021215.zip (238.28 KB)
+│       │       ├── Libyana Cell info_HQ_ 3G_20250930130446-20260803021301.zip (233.91 KB)
+│       │       ├── Libyana Cell info_HQ_ 4G_20250930130511-20260803041325.zip (410.11 KB)
+│       │       ├── LTE whole network KPI Report_daily_City_30Days-20260803080000.zip (55.54 KB)
+│       │       ├── Maximum Attach user per TAI-20260803080000.zip (91.62 KB)
+│       │       ├── MSC Server KPI-20260803080000.zip (69.74 KB)
+│       │       ├── MSC Server KPI_20250515092052-20260803050000.zip (69.34 KB)
+│       │       ├── MSC Server KPI_CS Subscribers_20260408083509-20260803050044.zip (33.21 KB)
+│       │       ├── PS Daily Traffic_2G_3G_4G_ Last_Year_20260703184314-20260803004813.zip (9.24 KB)
+│       │       ├── PS Roaming users_20260413140246-20260803011221.zip (968.63 KB)
+│       │       ├── PS users_2G_3G_4G_20251027093446-20260803003552.zip (11.16 KB)
+│       │       ├── pythonAutoEastHGDaily-20260803080000.zip (2.44 MB)
+│       │       ├── Roaming users-20260803080000.zip (974.42 KB)
+│       │       ├── TRIPOLIPS CS Daily Traffic per site_2G_3G_4G_20260728104208-20260803001908.zip (721.72 KB)
+│       │       ├── Two weeks ago UMTS and LTE interference backup_20251015142010-20260803012833.zip (17.32 MB)
+│       │       ├── VoLTE Key KPIs_daily whole network _faraj_20251109070655-20260803071531.zip (10.21 KB)
+│       │       ├── VoLTE_KPIs-20260803080000.zip (4.94 KB)
+│       │       ├── vUGW KPI-20260803080500.zip (70.73 KB)
+│       │       ├── vUGW KPI_20250515092123-20260803050000.zip (70.57 KB)
+│       │       ├── vUSN KPI-20260803080500.zip (10.68 KB)
+│       │       ├── vUSN KPI_20250515092144-20260803050000.zip (10.73 KB)
+│       │       └── Whole Network Daily BH KPs template 14days ago_20250920193936-20260803020024.zip (10.30 KB)
+│       ├── 20260811/
+│       │   ├── unzipped/
+│       │   └── zipped/
+│       └── Daily_Output/
+│           ├── Subscribers_FTP_Daily_History.xlsx (5.31 KB)
+│           └── Subscribers_FTP_Daily_Report_20260803.xlsx (5.30 KB)
+├── download_analysis_pipeline.py (15.59 KB)
+├── export_project_structure.py (4.87 KB)
+├── from ftplib import FTP_TLS.py (5.04 KB)
+├── Historical_Data.xlsx (6.39 KB)
+├── mae_scraper_newerBrowserversion149.py (13.24 KB)
+├── neteco_continuous 15-5-2026.py (10.09 KB)
+├── open_project_settings.bat (324.00 B)
+├── Processing & Merging Script 31-5 with sharing.py (14.45 KB)
+├── project_config.py (1.79 KB)
+├── project_logging.py (1.60 KB)
+├── project_settings_gui.py (35.08 KB)
+├── requirements.txt (1.51 KB)
+├── run_smartcare_analysis_task.bat (303.00 B)
+├── run_smartcare_analysis_task.py (4.69 KB)
+├── subscribers_ftp_daily.py (19.66 KB)
+├── subscribers_interference_monthly.py (17.68 KB)
+├── subscriers with 2G interference with ftp 31-5-26_v2.py (28.96 KB)
+├── subscriers with 2G interference with ftp andd weekly backup report 3-8-2026.py (32.69 KB)
+└── telegram_noc_bot.py (32.23 KB)
+
+======================================================================
+🐍 Python scripts visible in tree: 0
+======================================================================

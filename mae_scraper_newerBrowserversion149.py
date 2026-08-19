@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import shutil
 import winreg
@@ -13,6 +14,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from project_config import env_int, env_path_str, env_str
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # ================== USER CONFIG =====================
 USERNAME = env_str("MAE_USERNAME")
 PASSWORD = env_str("MAE_PASSWORD")
@@ -22,10 +28,32 @@ EXPORT_BASE_DIR = env_path_str("MAE_EXPORT_BASE_DIR", r"C:\Current_Alarms")
 WAIT_TIMEOUT = env_int("MAE_WAIT_TIMEOUT", 45)
 INTERVAL_SECONDS = env_int("MAE_INTERVAL_SECONDS", 300)
 
+
+# ========== ENSURE DIRECTORIES EXIST ==========
+def ensure_dir(path):
+    """Create directory if it doesn't exist."""
+    if not path:
+        return path
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+        print(f"📁 Created directory: {path}")
+    return path
+
+
+# Create directories before proceeding
+DOWNLOAD_DIR = ensure_dir(DOWNLOAD_DIR)
+EXPORT_BASE_DIR = ensure_dir(EXPORT_BASE_DIR)
+
+# ========== ERROR SCREENSHOT DIRECTORY ==========
+# Get the DATA_ROOT from environment or use default
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+ERROR_SCREENSHOT_DIR = ensure_dir(os.path.join(DATA_ROOT, "Errors"))
+
 # =====================================================
 
 if not USERNAME or not PASSWORD or not URL:
     raise RuntimeError("MAE_USERNAME, MAE_PASSWORD, and MAE_URL must be configured in .env or environment variables.")
+
 
 def wait_for_file(download_dir, before_files, timeout=180):
     end = time.time() + timeout
@@ -38,10 +66,12 @@ def wait_for_file(download_dir, before_files, timeout=180):
         time.sleep(2)
     return None
 
+
 def wait_for_ready_state(timeout=WAIT_TIMEOUT):
     WebDriverWait(driver, timeout).until(
         lambda d: d.execute_script("return document.readyState") == "complete"
     )
+
 
 def wait_and_fill(locator, value):
     elem = WebDriverWait(driver, WAIT_TIMEOUT).until(EC.visibility_of_element_located(locator))
@@ -50,11 +80,13 @@ def wait_and_fill(locator, value):
     elem.send_keys(value)
     return elem
 
+
 def wait_and_click(locator):
     elem = WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable(locator))
     driver.execute_script("arguments[0].scrollIntoView({block:'center'});", elem)
     driver.execute_script("arguments[0].click();", elem)
     return elem
+
 
 def print_driver_versions():
     caps = driver.capabilities
@@ -95,6 +127,7 @@ chrome_options.add_experimental_option("prefs", {
 print("🔧 Initializing ChromeDriver...")
 create_driver()
 
+
 def login_and_navigate():
     """Handles initial login and moving to the Current Alarms page."""
     print("🔐 Logging in...")
@@ -104,10 +137,10 @@ def login_and_navigate():
 
         # Check if login form is present
         has_login_form = len(driver.find_elements(By.ID, "username")) > 0
-        
+
         if has_login_form:
             print("📝 Filling login credentials...")
-            
+
             # Fill username using a visibility wait; fallback to JS assignment
             try:
                 username_field = wait_and_fill((By.ID, "username"), USERNAME)
@@ -188,7 +221,7 @@ def login_and_navigate():
             "//a[contains(text(), 'Current Alarms')] | "
             "//*[contains(text(), 'Current Alarms')]"
         )
-        
+
         try:
             # Wait for Current Alarms to be present
             current_alarm = WebDriverWait(driver, WAIT_TIMEOUT).until(
@@ -213,14 +246,17 @@ def login_and_navigate():
             except Exception as e2:
                 print(f"⚠️ Alternative click failed: {e2}")
                 # Take screenshot for debugging
-                driver.save_screenshot("debug_current_alarms.png")
-                print("📸 Screenshot saved as debug_current_alarms.png")
+                screenshot_path = os.path.join(ERROR_SCREENSHOT_DIR,
+                                               f"debug_current_alarms_{time.strftime('%Y%m%d_%H%M%S')}.png")
+                driver.save_screenshot(screenshot_path)
+                print(f"📸 Screenshot saved as: {screenshot_path}")
 
         time.sleep(10)
         return True
     except Exception as e:
         print(f"❌ Login/Navigation failed: {e}")
         return False
+
 
 # ========== MAIN EXECUTION ==========
 try:
@@ -229,21 +265,21 @@ try:
         print("❌ Initial login failed. Exiting...")
         driver.quit()
         exit(1)
-    
+
     # Main loop
     while True:
         try:
             print(f"\n🔄 [{time.strftime('%H:%M:%S')}] Refreshing page for latest data...")
             driver.refresh()
             time.sleep(12)
-            
+
             # Check if we were logged out
             if "login" in driver.current_url.lower() or len(driver.find_elements(By.ID, "username")) > 0:
                 print("⚠️ Session expired during refresh. Re-logging in...")
                 if not login_and_navigate():
                     print("❌ Re-login failed. Exiting...")
                     break
-            
+
             # Switch to the Alarms Iframe
             driver.switch_to.default_content()
             iframe_xpath = "//iframe[contains(@id,'fmAlarmView')]"
@@ -251,46 +287,49 @@ try:
                 EC.presence_of_element_located((By.XPATH, iframe_xpath))
             )
             driver.switch_to.frame(driver.find_element(By.XPATH, iframe_xpath))
-            
+
             # Find and Click Export
             print("🔍 Finding Export button...")
             export_xpath = "//button[normalize-space()='Export']"
             export_btn = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.XPATH, export_xpath))
             )
-            
+
             before_files = set(os.listdir(DOWNLOAD_DIR))
             driver.execute_script("arguments[0].click();", export_btn)
             time.sleep(3)
-            
+
             # Handle Export Dialog
             print("📦 Handling Export Dialog...")
             all_opt = WebDriverWait(driver, 15).until(
                 EC.element_to_be_clickable((By.XPATH, "//*[text()='All']"))
             )
             driver.execute_script("arguments[0].click();", all_opt)
-            
+
             ok_btn = driver.find_element(By.XPATH, "//span[text()='OK']/ancestor::button")
             driver.execute_script("arguments[0].click();", ok_btn)
-            
+
             # Wait for download and move file
             downloaded_file = wait_for_file(DOWNLOAD_DIR, before_files)
             if downloaded_file:
                 date_folder = time.strftime("%Y-%m-%d")
                 dest_dir = os.path.join(EXPORT_BASE_DIR, date_folder)
-                os.makedirs(dest_dir, exist_ok=True)
+                dest_dir = ensure_dir(dest_dir)  # Ensure destination exists
                 new_filename = f"CurrentAlarms_MAE_{time.strftime('%Y%m%d_%H%M%S')}.csv"
                 shutil.move(downloaded_file, os.path.join(dest_dir, new_filename))
                 print(f"✅ Export Success: {new_filename}")
             else:
                 print("❌ Download timed out.")
-                
+
         except Exception as e:
             print(f"⚠️ Cycle Error: {e}")
             invalid_session = isinstance(e, InvalidSessionIdException) or "invalid session id" in str(e).lower()
             if not invalid_session:
                 try:
-                    driver.save_screenshot(f"error_{time.strftime('%Y%m%d_%H%M%S')}.png")
+                    # Save screenshot to Errors folder
+                    screenshot_path = os.path.join(ERROR_SCREENSHOT_DIR, f"error_{time.strftime('%Y%m%d_%H%M%S')}.png")
+                    driver.save_screenshot(screenshot_path)
+                    print(f"📸 Screenshot saved as: {screenshot_path}")
                 except Exception as screenshot_error:
                     print(f"⚠️ Screenshot failed: {screenshot_error}")
 
@@ -304,7 +343,7 @@ try:
             if not login_and_navigate():
                 print("❌ Re-login failed. Exiting...")
                 break
-        
+
         # Countdown
         print(f"😴 Sleeping for {INTERVAL_SECONDS // 60} minutes...")
         for m in range(INTERVAL_SECONDS // 60, 0, -1):
@@ -313,7 +352,7 @@ try:
         remaining_seconds = INTERVAL_SECONDS % 60
         if remaining_seconds > 0:
             time.sleep(remaining_seconds)
-            
+
 except KeyboardInterrupt:
     print("\n🛑 Automation stopped by user.")
 finally:
