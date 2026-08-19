@@ -1,5 +1,7 @@
 """Create an evidence-based NOC Excel report from MAE and both NetEco exports."""
 import argparse
+import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -8,11 +10,13 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from project_config import env_path, load_env_file
+from project_config import env_int, env_path, load_env_file
 
 
 load_env_file()
 BASE_DIR = env_path("NOC_BASE_DIR", r"C:\Current_Alarms")
+SHARED_FOLDER = env_path("NOC_SHARED_FOLDER", BASE_DIR / "Shared Current Alarms")
+INTERVAL_SECONDS = env_int("NOC_ANALYSIS_INTERVAL_SECONDS", 300)
 
 SERVICE_OUTAGE = (
     "NE Is Disconnected", "NodeB Unavailable", "GSM Cell out of Service", "UMTS Cell Unavailable",
@@ -42,7 +46,18 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Build an enhanced site-centric NOC report")
     parser.add_argument("--date-folder", default="", help="Dated NOC folder; defaults to the latest YYYY-MM-DD folder")
     parser.add_argument("--output", default="", help="Optional full path of the workbook to create")
+    parser.add_argument("--once", action="store_true",
+                         help="Build a single report and exit instead of looping continuously")
     return parser.parse_args()
+
+
+def log(message):
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}", flush=True)
+
+
+def ensure_dir(path):
+    Path(path).mkdir(parents=True, exist_ok=True)
+    return Path(path)
 
 
 def latest_date_folder(base_dir: Path) -> Path:
@@ -118,12 +133,18 @@ def build_triage(mae: pd.DataFrame, power: pd.DataFrame, neteco_all: pd.DataFram
     mae["Site"] = normalize_site(mae["MO Name"])
     mae[["MAE Category", "MAE Priority"]] = mae["Name"].apply(lambda value: pd.Series(classify_mae_alarm(value)))
     mae["Last Occurred Parsed"] = pd.to_datetime(mae["Last Occurred (NT)"], errors="coerce")
-    mae["First Occurred Parsed"] = pd.to_datetime(mae["First Occurred (NT)"], errors="coerce")
+    mae["First Occurred Parsed"] = (
+        pd.to_datetime(mae["First Occurred (NT)"], errors="coerce")
+        if "First Occurred (NT)" in mae.columns else pd.NaT
+    )
 
     power = power.copy()
     power["Site"] = normalize_site(power["Site Name"])
     power["Last Occurred Parsed"] = pd.to_datetime(power["Last Occurred"], errors="coerce")
-    power["First Occurred Parsed"] = pd.to_datetime(power["First Occurred"], errors="coerce")
+    power["First Occurred Parsed"] = (
+        pd.to_datetime(power["First Occurred"], errors="coerce")
+        if "First Occurred" in power.columns else pd.NaT
+    )
 
     neteco_all = neteco_all.copy().drop_duplicates(subset=["Site Name", "Name", "Alarm ID"])
     neteco_all["Site"] = normalize_site(neteco_all["Site Name"])
@@ -210,9 +231,7 @@ def format_workbook(path: Path):
     workbook.save(path)
 
 
-def main():
-    args = parse_args()
-    folder = Path(args.date_folder).expanduser().resolve() if args.date_folder else latest_date_folder(BASE_DIR)
+def build_report(folder: Path, output: Path = None) -> Path:
     mae_file = latest_file(folder, "CurrentAlarms_MAE_*.csv")
     power_file = latest_file(folder, "CurrentAlarms_NetEco_*.csv")
     all_file = latest_file(folder, "NetEco_All_Current_Alarm_*.csv")
@@ -233,7 +252,7 @@ def main():
                                         (triage["Priority"] == "P1").sum(), (triage["Priority"] == "P2").sum(), (triage["Priority"] == "P3").sum()]})
     policy = pd.DataFrame({"Rule": ["P1", "P2", "P2", "P3", "MAE primary impact"],
                            "Definition": ["NE Is Disconnected + Mains Failure + critical DC/battery evidence", "NE Is Disconnected + Mains Failure", "NE Is Disconnected without power evidence; investigate transport/NMS/NE", "Mains/energy alarm with service retained", "NE Is Disconnected; NodeB Unavailable; Cell Unavailable / out of service"]})
-    output = Path(args.output).expanduser().resolve() if args.output else folder / f"Enhanced_NOC_Analysis_{datetime.now():%Y%m%d_%H%M%S}.xlsx"
+    output = output or folder / f"Enhanced_NOC_Analysis_{datetime.now():%Y%m%d_%H%M%S}.xlsx"
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         dashboard.to_excel(writer, sheet_name="Dashboard", index=False)
         triage.to_excel(writer, sheet_name="NOC Site Triage", index=False)
@@ -246,7 +265,49 @@ def main():
         neteco_all.drop_duplicates(subset=["Site Name", "Name", "Alarm ID"]).to_excel(writer, sheet_name="NetEco All Raw", index=False)
         policy.to_excel(writer, sheet_name="Alarm Policy", index=False)
     format_workbook(output)
-    print(f"Enhanced NOC report saved: {output}")
+    return output
+
+
+def run_once(date_folder="", output=""):
+    folder = Path(date_folder).expanduser().resolve() if date_folder else latest_date_folder(BASE_DIR)
+    output_path = Path(output).expanduser().resolve() if output else None
+    log(f"Processing folder: {folder}")
+    saved = build_report(folder, output_path)
+    log(f"Enhanced NOC report saved: {saved}")
+
+    try:
+        shared_dir = ensure_dir(SHARED_FOLDER)
+        shutil.copy2(saved, shared_dir / "Live_Enhanced_NOC_Analysis.xlsx")
+        log(f"Shared live report updated: {shared_dir / 'Live_Enhanced_NOC_Analysis.xlsx'}")
+    except Exception as exc:
+        log(f"WARNING: Could not update shared file, it might be open: {exc}")
+
+    return saved
+
+
+def main():
+    args = parse_args()
+
+    if args.once or args.date_folder or args.output:
+        run_once(args.date_folder, args.output)
+        return
+
+    log("Enhanced NOC analysis loop is running.")
+    log(f"Input base folder: {BASE_DIR}")
+    log(f"Loop interval: {INTERVAL_SECONDS // 60} minutes")
+
+    while True:
+        try:
+            run_once()
+        except Exception as exc:
+            log(f"ERROR: Analysis cycle failed: {exc}")
+
+        log(f"Sleeping for {INTERVAL_SECONDS // 60} minutes. Press Ctrl+C to stop.")
+        try:
+            time.sleep(INTERVAL_SECONDS)
+        except KeyboardInterrupt:
+            log("Analysis loop stopped by user.")
+            break
 
 
 if __name__ == "__main__":
