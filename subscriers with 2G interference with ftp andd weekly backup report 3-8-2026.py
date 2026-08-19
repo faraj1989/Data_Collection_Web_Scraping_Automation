@@ -1,5 +1,6 @@
 import os
 import zipfile
+import warnings
 import pandas as pd
 from io import StringIO
 from datetime import datetime
@@ -11,12 +12,22 @@ from project_config import env_int, env_path_str, env_str, load_env_file
 
 load_env_file()
 
+# openpyxl warns on every workbook that lacks an explicit default style; harmless, just noisy.
+warnings.filterwarnings(
+    "ignore",
+    message="Workbook contains no default style, apply openpyxl's default",
+    category=UserWarning,
+    module="openpyxl",
+)
+
 # Configure Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S"
 )
+# Per-file download/extract/load chatter goes to DEBUG; console only shows summaries.
+logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 # ======================================================
 # CENTRALIZED DIRECTORIES (from GUI)
@@ -70,7 +81,7 @@ class SFTPDownload:
             self.transport.connect(username=self.username, password=self.password)
             self.sftp = paramiko.SFTPClient.from_transport(self.transport)
             self.sftp.chdir(self.remote_path)
-            logging.info(f"✅ SFTP connected to {self.host}:{self.port}")
+            logging.debug(f"✅ SFTP connected to {self.host}:{self.port}")
             return True
         except Exception as e:
             logging.error(f"❌ SFTP connection failed: {e}")
@@ -93,7 +104,7 @@ class SFTPDownload:
         try:
             local_file = os.path.join(local_path, remote_filename)
             self.sftp.get(remote_filename, local_file)
-            logging.info(f"✅ Downloaded: {remote_filename}")
+            logging.debug(f"✅ Downloaded: {remote_filename}")
             return local_file
         except Exception as e:
             logging.error(f"Failed to download {remote_filename}: {e}")
@@ -105,7 +116,7 @@ class SFTPDownload:
             self.sftp.close()
         if self.transport:
             self.transport.close()
-        logging.info("SFTP connection closed")
+        logging.debug("SFTP connection closed")
 
 
 # ======================================================
@@ -142,7 +153,7 @@ def download_from_sftp(config, base_local_folder, timeout=30):
     password = config["password"]
     remote_path = config["remote_path"]
 
-    logging.info(f"🔐 Connecting to SFTP server {host}:{port}...")
+    logging.debug(f"🔐 Connecting to SFTP server {host}:{port}...")
 
     sftp_client = None
     downloaded = 0
@@ -151,24 +162,25 @@ def download_from_sftp(config, base_local_folder, timeout=30):
         sftp_client = SFTPDownload(host, port, username, password, remote_path, timeout)
         sftp_client.connect()
 
-        logging.info("Retrieving directory list...")
+        logging.debug("Retrieving directory list...")
         files = sftp_client.list_files()
-        logging.info(f"Found {len(files)} total files on remote server.")
+        logging.debug(f"Found {len(files)} total files on remote server.")
 
         import fnmatch
         expected_pattern = config["file_pattern"].replace("{yyyymmdd}", today_str)
+        skipped = 0
         for file in files:
             if file.lower().endswith(".zip") and fnmatch.fnmatch(file, expected_pattern):
                 local_path = os.path.join(zipped_folder, file)
                 if os.path.exists(local_path):
-                    logging.info(f"⏭ Skipping (already exists): {file}")
+                    logging.debug(f"⏭ Skipping (already exists): {file}")
+                    skipped += 1
                     continue
-                logging.info(f"⬇ Downloading: {file}")
+                logging.debug(f"⬇ Downloading: {file}")
                 sftp_client.download_file(file, zipped_folder)
                 downloaded += 1
 
-        sftp_client.close()
-        logging.info(f"✅ SFTP done. Downloaded {downloaded} file(s) to {zipped_folder}")
+        logging.info(f"✅ SFTP done. Downloaded {downloaded} file(s), skipped {skipped} existing, → {zipped_folder}")
         return date_folder
 
     except socket.timeout:
@@ -210,6 +222,8 @@ def extract_zips(date_folder):
 
     os.makedirs(unzipped_root, exist_ok=True)
 
+    extracted = 0
+    skipped = 0
     for file_name in os.listdir(zipped_folder):
         if not file_name.lower().endswith(".zip"):
             continue
@@ -222,11 +236,12 @@ def extract_zips(date_folder):
         extract_path = os.path.join(unzipped_root, extract_folder_name)
 
         if os.path.exists(extract_path) and os.listdir(extract_path):
-            logging.info(f"⏭ Already extracted: {file_name}")
+            logging.debug(f"⏭ Already extracted: {file_name}")
+            skipped += 1
             continue
 
         try:
-            logging.info(f"📦 Extracting: {file_name} → {extract_path}")
+            logging.debug(f"📦 Extracting: {file_name} → {extract_path}")
             os.makedirs(extract_path, exist_ok=True)
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 root = Path(extract_path).resolve()
@@ -235,13 +250,16 @@ def extract_zips(date_folder):
                     if target != root and root not in target.parents:
                         raise ValueError(f"Unsafe ZIP member path: {member.filename}")
                 zip_ref.extractall(root)
-            logging.info(f"✅ Done: {file_name}")
+            logging.debug(f"✅ Done: {file_name}")
+            extracted += 1
         except zipfile.BadZipFile:
             logging.error(f"❌ Corrupted ZIP skipped: {file_name}")
         except PermissionError:
             logging.error(f"🔒 Permission denied: {file_name}")
         except Exception as e:
             logging.error(f"⚠️ Unexpected error with {file_name}: {e}")
+
+    logging.info(f"✅ Extracted {extracted} new zip(s), skipped {skipped} already-extracted, → {unzipped_root}")
 
 
 # ======================================================
@@ -270,19 +288,38 @@ def load_clean_csv(file_path):
 # ======================================================
 # 3. Load all CSVs from unzipped folder (recursive)
 # ======================================================
+def load_clean_excel(file_path):
+    """Load an already-clean Huawei-export .xlsx (header on row 1, no preamble)."""
+    try:
+        df = pd.read_excel(file_path, sheet_name=0)
+    except Exception as e:
+        logging.error(f"⚠️ Could not read Excel file {file_path}: {e}")
+        return None
+    if "Time" not in df.columns:
+        return None
+    df.replace("NIL", pd.NA, inplace=True)
+    return df
+
+
 def load_all_csvs(unzipped_folder):
-    """Load CSVs from all subfolders of unzipped_folder"""
+    """Load CSVs and Excel exports from all subfolders of unzipped_folder"""
     dataframes = {}
     if not os.path.exists(unzipped_folder):
         return dataframes
     for root, dirs, files in os.walk(unzipped_folder):
         for file in files:
-            if file.endswith(".csv") and "Peak" not in file:
-                file_path = os.path.join(root, file)
+            if "Peak" in file:
+                continue
+            file_path = os.path.join(root, file)
+            if file.endswith(".csv"):
                 df = load_clean_csv(file_path)
-                if df is not None:
-                    key_name = os.path.basename(root)
-                    dataframes[key_name] = df
+            elif file.endswith(".xlsx"):
+                df = load_clean_excel(file_path)
+            else:
+                continue
+            if df is not None:
+                key_name = os.path.basename(root)
+                dataframes[key_name] = df
     return dataframes
 
 
@@ -293,7 +330,7 @@ def find_cs(dataframes):
     candidates = [name for name in dataframes.keys() if name.lower().startswith('cs roaming')]
     if candidates:
         return dataframes[candidates[0]]
-    logging.error("❌ CS Roaming dataset not found. Available keys:", list(dataframes.keys()))
+    logging.error("❌ CS Roaming dataset not found. Available keys: %s", list(dataframes.keys()))
     return None
 
 
@@ -301,7 +338,7 @@ def find_ps_roaming(dataframes):
     candidates = [name for name in dataframes.keys() if name.lower().startswith('ps roaming users')]
     if candidates:
         return dataframes[candidates[0]]
-    logging.error("❌ PS Roaming dataset not found. Available keys:", list(dataframes.keys()))
+    logging.error("❌ PS Roaming dataset not found. Available keys: %s", list(dataframes.keys()))
     return None
 
 
@@ -309,7 +346,7 @@ def find_msc(dataframes):
     candidates = [name for name in dataframes.keys() if "MSC Server KPI" in name]
     if candidates:
         return dataframes[candidates[0]]
-    logging.error("❌ MSC dataset not found. Available keys:", list(dataframes.keys()))
+    logging.error("❌ MSC dataset not found. Available keys: %s", list(dataframes.keys()))
     return None
 
 
@@ -317,7 +354,7 @@ def find_ps_users(dataframes):
     candidates = [name for name in dataframes.keys() if "PS users" in name or "2G_3G_4G" in name]
     if candidates:
         return dataframes[candidates[0]]
-    logging.error("❌ PS Users dataset not found. Available keys:", list(dataframes.keys()))
+    logging.error("❌ PS Users dataset not found. Available keys: %s", list(dataframes.keys()))
     return None
 
 
@@ -729,6 +766,7 @@ def main():
     if not dataframes:
         logging.error("❌ No CSV files found in unzipped folder. Exiting.")
         return
+    logging.info(f"✅ Loaded {len(dataframes)} dataset(s) from {unzipped_folder}")
 
     # 4. Process KPIs
     peak_cs = process_cs(find_cs(dataframes))
