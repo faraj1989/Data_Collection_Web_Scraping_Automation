@@ -13,6 +13,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import env_int, env_path_str, env_str
 
 if hasattr(sys.stdout, "reconfigure"):

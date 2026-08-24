@@ -13,6 +13,7 @@ from typing import List
 
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import load_env_file
 from project_logging import setup_logger as create_logger
 

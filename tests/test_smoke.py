@@ -28,15 +28,16 @@ class ConfigurationSmokeTests(unittest.TestCase):
             self.assertEqual(parse_env_file(env_file)["EMPTY"], "")
 
     def test_stable_entry_points_exist(self):
-        for name in ("mae_scraper.py", "neteco_scraper.py", "merge_noc_reports.py",
-                     "subscriber_reports.py", "ps_traffic_report.py"):
+        for name in ("scrapers/mae_scraper.py", "scrapers/neteco_scraper.py",
+                     "processing/merge_noc_reports.py", "reports/subscriber_reports.py",
+                     "reports/ps_traffic_report.py"):
             self.assertTrue((ROOT / name).is_file(), name)
 
 
 class AnalysisSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.pipeline = load_module("download_analysis_pipeline.py", "analysis_pipeline_smoke")
+        cls.pipeline = load_module("reports/download_analysis_pipeline.py", "analysis_pipeline_smoke")
 
     def test_discover_files_filters_supported_analysis_exports(self):
         with tempfile.TemporaryDirectory() as directory:

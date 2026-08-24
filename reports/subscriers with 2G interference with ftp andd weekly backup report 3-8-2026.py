@@ -8,6 +8,8 @@ import socket
 import logging
 import paramiko
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import env_int, env_path_str, env_str, load_env_file
 
 load_env_file()

@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import load_env_file
 from project_logging import setup_logger
 
