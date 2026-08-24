@@ -10,6 +10,8 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Border, Font, Side
 from openpyxl.utils import get_column_letter
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import env_int, env_path
 
 # --- CONFIGURATION ---

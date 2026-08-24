@@ -7,6 +7,8 @@ from io import StringIO
 
 from datetime import datetime
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import load_env_file
 
 load_env_file()

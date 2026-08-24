@@ -10,6 +10,8 @@ import pandas as pd
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import Conflict
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from project_config import env_path, env_str
 
 # ================= CONFIGURATION =================
