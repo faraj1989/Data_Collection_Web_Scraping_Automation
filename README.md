@@ -36,7 +36,7 @@ Use these stable names for new shortcuts, scheduled tasks, and documentation:
 - `reports/run_smartcare_analysis_task.py`
 - `bots/telegram_noc_bot.py`
 
-The older date/version-named scripts are retained as implementation compatibility targets. The stable entry points let those internal names be replaced later without changing operations. `control_panel.py`'s `SCRIPT_REGISTRY` is the single source of truth for every script's location.
+The older date/version-named scripts are retained as implementation compatibility targets. The stable entry points let those internal names be replaced later without changing operations. `script_registry.py`'s `SCRIPT_REGISTRY` is the single source of truth for every script's location.
 
 ## Security and operations
 

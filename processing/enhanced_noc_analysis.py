@@ -6,42 +6,26 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from project_config import env_int, env_path, load_env_file
+from alarm_taxonomy import (
+    COMMUNICATION_TERMS,
+    CRITICAL_ENERGY_TERMS,
+    SEVERITY_ORDER,
+    classify_mae_alarm,
+    has_term,
+    severity_max,
+)
+from report_formatting import format_workbook
 
 
 load_env_file()
 BASE_DIR = env_path("NOC_BASE_DIR", r"C:\Current_Alarms")
 SHARED_FOLDER = env_path("NOC_SHARED_FOLDER", BASE_DIR / "Shared Current Alarms")
 INTERVAL_SECONDS = env_int("NOC_ANALYSIS_INTERVAL_SECONDS", 300)
-
-SERVICE_OUTAGE = (
-    "NE Is Disconnected", "NodeB Unavailable", "GSM Cell out of Service", "UMTS Cell Unavailable",
-    "Cell Unavailable", "Local Cell Unusable", "GSM Local Cell Unusable", "RF Out of Service",
-)
-TRANSPORT_TERMS = ("SCTP", "S1ap", "X2 Interface", "Link Down", "OML", "CSL", "Ping Failure",
-                   "User Plane", "SDH/SONET", "VLAN", "ALD Maintenance Link")
-POWER_TERMS = ("DC Input Power", "External Power Supply", "Power Failure")
-RADIO_HARDWARE_TERMS = ("BBU", "CPRI", "RF Unit", "RHUB", "Board ", "Optical Module", "Inter-BBU")
-RADIO_QUALITY_TERMS = ("VSWR", "RTWP", "RSSI", "RX Channel", "TX Channel", "Radio Link Failure",
-                       "Interference Noise")
-CAPACITY_TERMS = ("Overload", "congestion", "Resources Used", "Traffic Exceeding", "KPI entity")
-LICENSE_TERMS = ("License", "Licensed Feature", "software service fee")
-MAINTENANCE_TERMS = ("backup", "Maintenance", "Task execution", "Data Store", "Data Configuration")
-SECURITY_TERMS = ("Attack", "Blacklist", "Security", "Insecure", "Weak Algorithms", "Login Attempts",
-                  "Changes a User's Password")
-CRITICAL_ENERGY_TERMS = (
-    "LLVD", "BLVD", "Bus Bar Undervoltage", "DC Under Voltage", "DC Ultra Under Voltage",
-    "DC Ultra Undervoltage", "Remaining Capacity Percent Under 30", "Remaining Capacity Percentage Under 30",
-    "Overdischarge", "Lithium Battery Protection", "Battery Undervoltage", "Battery Undervoltage Protection",
-)
-COMMUNICATION_TERMS = ("Communication Between NMS And NE Is Abnormal", "Communication Failure")
-SEVERITY_ORDER = {"Critical": 4, "Major": 3, "Minor": 2, "Warning": 1}
 
 
 def parse_args():
@@ -88,42 +72,6 @@ def load_export(path: Path) -> pd.DataFrame:
 def normalize_site(series: pd.Series) -> pd.Series:
     return (series.astype(str).str.replace("(FN)", "", regex=False).str.strip()
             .replace({"-": pd.NA, "nan": pd.NA, "": pd.NA}))
-
-
-def has_term(names, terms) -> bool:
-    return any(any(term.lower() in str(name).lower() for term in terms) for name in names)
-
-
-def classify_mae_alarm(name: str) -> tuple[str, str]:
-    text = str(name or "")
-    if text in SERVICE_OUTAGE:
-        return "Service Outage", "P1" if text in {"NE Is Disconnected", "NodeB Unavailable"} else "P2"
-    if has_term([text], SECURITY_TERMS):
-        return "Security / Core Protection", "P3"
-    if has_term([text], LICENSE_TERMS):
-        return "License / Entitlement", "P3"
-    if has_term([text], POWER_TERMS):
-        return "RAN Power", "P2"
-    if has_term([text], TRANSPORT_TERMS):
-        return "Transport / Connectivity", "P2"
-    if has_term([text], RADIO_HARDWARE_TERMS):
-        return "RAN Hardware", "P2"
-    if has_term([text], RADIO_QUALITY_TERMS):
-        return "Radio Quality", "P3"
-    if has_term([text], CAPACITY_TERMS):
-        return "Capacity / Performance", "P3"
-    if has_term([text], MAINTENANCE_TERMS):
-        return "Maintenance / Management", "P3"
-    if "Clock" in text:
-        return "Synchronization", "P2"
-    if any(term in text for term in ("OpenStack", "Server", "Pool", "S-CSCF", "ASBC", "DIMM")):
-        return "Core / IT Platform", "P2"
-    return "Other / Review", "P3"
-
-
-def severity_max(values) -> str:
-    values = [value for value in values if pd.notna(value)]
-    return max(values, key=lambda value: SEVERITY_ORDER.get(str(value), 0), default="-")
 
 
 def join_unique(values) -> str:
@@ -210,27 +158,6 @@ def build_triage(mae: pd.DataFrame, power: pd.DataFrame, neteco_all: pd.DataFram
     result["First Occurred"] = result["First Occurred"].dt.strftime("%Y-%m-%d %H:%M:%S").where(result["First Occurred"].notna(), "-")
     result["Last Occurred"] = result["Last Occurred"].dt.strftime("%Y-%m-%d %H:%M:%S").where(result["Last Occurred"].notna(), "-")
     return result.sort_values(["Priority", "Last Occurred", "Site"], ascending=[True, False, True])
-
-
-def format_workbook(path: Path):
-    workbook = load_workbook(path)
-    priority_fills = {"P1": "C00000", "P2": "F4B183", "P3": "FFF2CC"}
-    for sheet in workbook.worksheets:
-        sheet.freeze_panes = "A2"
-        sheet.auto_filter.ref = sheet.dimensions
-        for cell in sheet[1]:
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill("solid", fgColor="1F4E78")
-        for row in range(2, sheet.max_row + 1):
-            if sheet.title == "NOC Site Triage":
-                value = sheet.cell(row, 1).value
-                if value in priority_fills:
-                    sheet.cell(row, 1).fill = PatternFill("solid", fgColor=priority_fills[value])
-                    sheet.cell(row, 1).font = Font(bold=True)
-        for column in range(1, sheet.max_column + 1):
-            values = [len(str(sheet.cell(row, column).value or "")) for row in range(1, min(sheet.max_row, 200) + 1)]
-            sheet.column_dimensions[get_column_letter(column)].width = min(max(values, default=10) + 2, 55)
-    workbook.save(path)
 
 
 def build_report(folder: Path, output: Path = None) -> Path:

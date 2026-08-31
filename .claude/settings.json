@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python.exe -m compileall -q processing)",
+      "Bash(export MAE_HISTORICAL_EXPORT_BASE_DIR=\"C:\\\\Historical_Alarms\")",
+      "Bash(export NETECO_HISTORICAL_EXPORT_BASE_DIR=\"C:\\\\Historical_Alarms\")",
+      "Bash(export HISTORICAL_ANALYSIS_OUTPUT_DIR=\"C:\\\\Historical_Alarms_Analysis_TEST\")",
+      "Bash(export HISTORICAL_SHARED_FOLDER=\"C:\\\\Historical_Alarms_Analysis_TEST\\\\Shared\")",
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(rm -rf \"/c/Historical_Alarms_Analysis_TEST\" && echo \"cleaned up test output\")",
+      "Bash(\".venv/Scripts/python.exe\" -m py_compile control_panel.py)",
+      "Bash(cd \"/c/Users/user/Desktop/python/Automation-master - Copy\" && diff \"/c/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-python-Automation-master---Copy/36a55492-67c8-412c-8ced-54d6b946d72a/scratchpad/env_before_save_test.txt\" .env)",
+      "Read(//c/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-python-Automation-master---Copy/36a55492-67c8-412c-8ced-54d6b946d72a/scratchpad/**)",
+      "Bash(grep -A4 \"Weekly Device Penetration\" \"/c/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-python-Automation-master---Copy/36a55492-67c8-412c-8ced-54d6b946d72a/scratchpad/env_before_save_test.txt\")",
+      "Bash(\".venv/Scripts/python.exe\" -m py_compile \"reports/run_smartcare_analysis_task.py\" script_registry.py)",
+      "Bash(\".venv/Scripts/python.exe\" \"reports/run_smartcare_analysis_task.py\" --help)",
+      "Bash(\".venv/Scripts/python.exe\" \"reports/run_smartcare_analysis_task.py\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8502 --max-time 10)",
+      "Bash(.venv/Scripts/python.exe -c \"import pandas, openpyxl; print\\('deps ok'\\)\")",
+      "Bash(.venv/Scripts/python.exe processing/historical_noc_analysis.py --once)",
+      "Read(//c/Users/user/Desktop/Libyana_Data/Output/Historical_Alarms_Analysis/**)",
+      "Read(//c/Users/user/Desktop/Libyana_Data/Output/**)",
+      "Bash(tasklist //FI \"IMAGENAME eq python.exe\" //FO CSV)",
+      "Bash(wmic process *)",
+      "Bash(.venv/Scripts/python.exe processing/enhanced_noc_analysis.py --once)"
+    ],
+    "additionalDirectories": [
+      "C:\\Historical_Alarms_Analysis_TEST"
+    ]
+  }
+}

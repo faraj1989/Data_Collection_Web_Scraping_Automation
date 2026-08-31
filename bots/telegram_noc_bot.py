@@ -357,7 +357,7 @@ def search_site_simple(site_query):
     neteco_site_name = None
     neteco_found = False
 
-    if not mae_found and not neteco.empty and "Site Name" in neteco.columns:
+    if not neteco.empty and "Site Name" in neteco.columns:
         neteco_copy = neteco.copy()
         neteco_copy["Site Name Clean"] = neteco_copy["Site Name"].astype(str).map(normalize_site_name)
         neteco_rows = neteco_copy[neteco_copy["Site Name Clean"].str.upper() == query_clean]

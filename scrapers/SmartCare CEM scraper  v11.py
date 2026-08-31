@@ -14,9 +14,11 @@ from project_config import env_int, env_path_str, env_str, load_env_file
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
+from webdriver_manager.chrome import ChromeDriverManager
 
 load_env_file()
 
@@ -44,6 +46,8 @@ def init_driver():
     chrome_options = Options()
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-insecure-localhost")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
 
     prefs = {
         "download.default_directory": DOWNLOAD_DIR,
@@ -53,12 +57,17 @@ def init_driver():
     }
     chrome_options.add_experimental_option("prefs", prefs)
 
-    driver = webdriver.Chrome(options=chrome_options)
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    except Exception as e:
+        print(f"webdriver_manager failed ({e}); falling back to Selenium Manager")
+        driver = webdriver.Chrome(options=chrome_options)
+
     driver.execute_cdp_cmd(
         "Page.setDownloadBehavior",
         {"behavior": "allow", "downloadPath": DOWNLOAD_DIR},
     )
-    driver.maximize_window()
     return driver
 
 
@@ -636,7 +645,7 @@ def find_and_download_task(driver, wait, timeout=EXPORT_TASK_TIMEOUT):
 
         if downloaded_path:
             print(f"\nDownloaded file: {downloaded_path}")
-            return True
+            return downloaded_path
 
         print("[WARN] Task was clicked, but no downloaded file was detected.")
         return False

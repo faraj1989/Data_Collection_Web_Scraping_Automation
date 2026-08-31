@@ -31,7 +31,10 @@ ALL_ALARMS_URL = env_str(
     "https://10.171.68.2:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmAlarmView&templateId=149&fmPage=true&_t=1787140556610",
 )
 
-DOWNLOAD_DIR = env_path_str("NETECO_DOWNLOAD_DIR", os.path.join(os.path.expanduser("~"), "Downloads"))
+DOWNLOAD_DIR = env_path_str(
+    "NETECO_ALL_DOWNLOAD_DIR",
+    os.path.join(env_path_str("NETECO_DOWNLOAD_DIR", os.path.join(os.path.expanduser("~"), "Downloads")), "AllAlarms"),
+)
 EXPORT_BASE_DIR = env_path_str("NETECO_EXPORT_BASE_DIR", r"C:\Current_Alarms")
 
 WAIT_TIMEOUT = env_int("NETECO_WAIT_TIMEOUT", 60)
@@ -177,7 +180,8 @@ def create_driver():
     chrome_options.add_argument("--allow-insecure-localhost")
     chrome_options.add_argument("--allow-running-insecure-content")
     chrome_options.add_argument("--allow-legacy-insecure-renegotiation")
-    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
 
     chrome_options.add_experimental_option(
         "prefs",
