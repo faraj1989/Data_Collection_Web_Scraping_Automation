@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import logging
 import os
@@ -21,7 +22,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 load_env_file()
 
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xlsm"}
+RECOVERABLE_EXTENSIONS = SUPPORTED_EXTENSIONS | {".zip"}
 COMPREHENSIVE_PREFIX = "Comprehensive_Analysis"
+PROCESSED_LEDGER_FILENAME = "processed_files_ledger.json"
 
 # =============================================================
 # CENTRALIZED DIRECTORIES (from GUI)
@@ -176,6 +179,93 @@ def build_summary(df: pd.DataFrame, source_name: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def file_fingerprint(path: Path) -> str:
+    """Content hash so a re-downloaded or relocated copy of a file already folded
+    into the historical archive is recognized even if its name or mtime changed."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_processed_ledger(history_path: Path) -> dict:
+    ledger_path = history_path.parent / PROCESSED_LEDGER_FILENAME
+    if not ledger_path.exists():
+        return {}
+    try:
+        return json.loads(ledger_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_processed_ledger(history_path: Path, ledger: dict) -> None:
+    ledger_path = history_path.parent / PROCESSED_LEDGER_FILENAME
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(json.dumps(ledger, indent=2), encoding="utf-8")
+
+
+def recover_stray_downloads(search_dirs: List[Path], target_dir: Path, logger: logging.Logger) -> List[Path]:
+    """Sweep up Comprehensive_Analysis exports that never made it into target_dir:
+    files left behind in a raw browser-download folder, or a file sitting one level
+    deep inside its own subfolder of target_dir (e.g. an old manual extraction).
+    Duplicates (identical content already present at the destination) are removed
+    instead of copied again."""
+    target_dir = Path(target_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_resolved = target_dir.resolve()
+    recovered: List[Path] = []
+    seen_dirs = set()
+
+    for search_dir in search_dirs:
+        search_dir = Path(search_dir)
+        if not search_dir.exists():
+            continue
+        search_resolved = search_dir.resolve()
+        if search_resolved in seen_dirs:
+            continue
+        seen_dirs.add(search_resolved)
+
+        for entry in list(search_dir.iterdir()):
+            if entry.is_file():
+                candidates = [entry]
+            elif entry.is_dir() and entry.resolve() != target_resolved:
+                candidates = [p for p in entry.iterdir() if p.is_file()]
+            else:
+                continue
+
+            for candidate in candidates:
+                if not candidate.stem.startswith(COMPREHENSIVE_PREFIX):
+                    continue
+                if candidate.suffix.lower() not in RECOVERABLE_EXTENSIONS:
+                    continue
+                if candidate.resolve().parent == target_resolved:
+                    continue  # already sitting flat where it belongs
+
+                destination = target_dir / candidate.name
+                if destination.exists():
+                    if file_fingerprint(destination) == file_fingerprint(candidate):
+                        logger.info(f"Duplicate of an already-recovered export, discarding stray copy: {candidate}")
+                        candidate.unlink()
+                        continue
+                    destination = destination.with_name(
+                        f"{destination.stem}_{datetime.now():%Y%m%d_%H%M%S}{destination.suffix}"
+                    )
+
+                logger.info(f"Recovering old/unprocessed export: {candidate} -> {destination}")
+                shutil.move(str(candidate), str(destination))
+                recovered.append(destination)
+
+            if entry.is_dir() and entry.resolve() != target_resolved:
+                try:
+                    if not any(entry.iterdir()):
+                        entry.rmdir()
+                except OSError:
+                    pass
+
+    return recovered
+
+
 def load_existing_dataframe(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
@@ -236,9 +326,9 @@ def save_historical_archive(history_path: Path, top100_df: pd.DataFrame, metrics
                                ignore_index=True) if not existing_metrics.empty else metrics_df.copy()
 
     if not merged_top100.empty:
-        merged_top100 = merged_top100.sort_values(["date", "total_traffic_bytes"], ascending=[False, False])
+        merged_top100 = merged_top100.sort_values(["date", "total_traffic_bytes"], ascending=[True, False])
     if not merged_metrics.empty:
-        merged_metrics = merged_metrics.sort_values("date", ascending=False)
+        merged_metrics = merged_metrics.sort_values("date", ascending=True)
 
     with pd.ExcelWriter(history_path, engine="openpyxl") as writer:
         if not merged_top100.empty:
@@ -273,9 +363,19 @@ def save_comprehensive_outputs(
     return [excel_path, top_csv, metrics_csv, historical_file]
 
 
-def process_data_file(file_path: Path, output_dir: Path, history_path: Path, logger: logging.Logger) -> dict:
+def process_data_file(file_path: Path, output_dir: Path, history_path: Path, logger: logging.Logger,
+                       ledger: dict) -> dict:
     if not file_path.stem.startswith(COMPREHENSIVE_PREFIX):
         logger.info(f"Skipping file because it does not start with {COMPREHENSIVE_PREFIX}: {file_path.name}")
+        return {}
+
+    fingerprint = file_fingerprint(file_path)
+    already = ledger.get(fingerprint)
+    if already:
+        logger.info(
+            f"Skipping {file_path.name}: identical content already in the historical archive "
+            f"(processed {already.get('processed_at')} as {already.get('source_name')})"
+        )
         return {}
 
     logger.info(f"Processing {file_path}")
@@ -287,6 +387,12 @@ def process_data_file(file_path: Path, output_dir: Path, history_path: Path, log
     base_name = re.sub(r"[^A-Za-z0-9._-]+", "_", file_path.stem).strip("_")
     output_dir.mkdir(parents=True, exist_ok=True)
     outputs = save_comprehensive_outputs(top100_df, metrics_df, output_dir, base_name, history_path)
+
+    ledger[fingerprint] = {
+        "source_name": file_path.name,
+        "processed_at": datetime.now().isoformat(timespec="seconds"),
+        "rows": int(len(cleaned_df)),
+    }
 
     return {
         "source": str(file_path),
@@ -322,7 +428,8 @@ def safe_extract_zip(archive: zipfile.ZipFile, destination: Path) -> None:
     archive.extractall(destination)
 
 
-def process_zip_file(zip_path: Path, output_root: Path, history_path: Path, logger: logging.Logger) -> List[dict]:
+def process_zip_file(zip_path: Path, output_root: Path, history_path: Path, logger: logging.Logger,
+                     ledger: dict) -> List[dict]:
     if not zip_path.stem.startswith(COMPREHENSIVE_PREFIX):
         logger.info(f"Skipping archive because it does not start with {COMPREHENSIVE_PREFIX}: {zip_path.name}")
         return []
@@ -353,7 +460,7 @@ def process_zip_file(zip_path: Path, output_root: Path, history_path: Path, logg
     results = []
     for data_file in data_files:
         per_file_output_dir = output_root / "processed" / data_file.stem
-        result = process_data_file(data_file, per_file_output_dir, history_path, logger)
+        result = process_data_file(data_file, per_file_output_dir, history_path, logger, ledger)
         if result:
             results.append(result)
     return results
@@ -392,8 +499,14 @@ def write_manifest(output_root: Path, processed_files: List[dict]) -> None:
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
-def run(input_dir: Path, output_root: Path, history_path: Path, logger: logging.Logger) -> List[dict]:
+def run(input_dir: Path, output_root: Path, history_path: Path, logger: logging.Logger,
+        recover_from: List[Path] = None) -> List[dict]:
     output_root.mkdir(parents=True, exist_ok=True)
+
+    recovered = recover_stray_downloads([*(recover_from or []), input_dir], input_dir, logger)
+    if recovered:
+        logger.info(f"Recovered {len(recovered)} old/unprocessed export(s) into {input_dir}")
+
     files = discover_files(input_dir)
     processed_results: List[dict] = []
 
@@ -401,20 +514,26 @@ def run(input_dir: Path, output_root: Path, history_path: Path, logger: logging.
         logger.warning(f"No Comprehensive_Analysis files found in {input_dir}")
         return processed_results
 
-    logger.info(f"Found {len(files)} file(s) to process")
+    logger.info(f"Found {len(files)} file(s) to consider (including any just recovered)")
+
+    ledger = load_processed_ledger(history_path)
+    ledger_size_before = len(ledger)
 
     for file_path in files:
-        logger.info(f"Processing: {file_path.name}")
+        logger.info(f"Considering: {file_path.name}")
         if file_path.suffix.lower() == ".zip":
-            results = process_zip_file(file_path, output_root, history_path, logger)
+            results = process_zip_file(file_path, output_root, history_path, logger, ledger)
             processed_results.extend(results)
         elif file_path.suffix.lower() in SUPPORTED_EXTENSIONS:
             per_file_output_dir = output_root / "processed" / file_path.stem
-            result = process_data_file(file_path, per_file_output_dir, history_path, logger)
+            result = process_data_file(file_path, per_file_output_dir, history_path, logger, ledger)
             if result:
                 processed_results.append(result)
         else:
             logger.info(f"Skipping unsupported file: {file_path}")
+
+    if len(ledger) != ledger_size_before:
+        save_processed_ledger(history_path, ledger)
 
     write_manifest(output_root, processed_results)
     return processed_results
@@ -437,6 +556,13 @@ def parse_args() -> argparse.Namespace:
         default=str(ANALYSIS_HISTORY_FILE),
         help=f"One combined historical archive spreadsheet (default: {ANALYSIS_HISTORY_FILE})",
     )
+    parser.add_argument(
+        "--recover-from",
+        nargs="*",
+        default=[str(SMARTCARE_DOWNLOAD_DIR)],
+        help="Additional folder(s) to sweep for old/unprocessed exports before analyzing "
+             f"(default: SMARTCARE_DOWNLOAD_DIR = {SMARTCARE_DOWNLOAD_DIR})",
+    )
     return parser.parse_args()
 
 
@@ -457,12 +583,14 @@ def main() -> int:
     source_dir = Path(args.source_dir).expanduser().resolve()
     output_dir = Path(args.output_dir).expanduser().resolve()
     history_file = Path(args.history_file).expanduser().resolve()
+    recover_from = [Path(p).expanduser().resolve() for p in args.recover_from]
 
     logger.info(f"📂 Scanning source: {source_dir}")
     logger.info(f"📁 Writing reports to: {output_dir}")
     logger.info(f"📄 Using historical archive: {history_file}")
+    logger.info(f"Also sweeping for old downloads in: {', '.join(str(p) for p in recover_from) or '(none)'}")
 
-    run(source_dir, output_dir, history_file, logger)
+    run(source_dir, output_dir, history_file, logger, recover_from=recover_from)
     logger.info("✅ Processing complete")
     return 0
 

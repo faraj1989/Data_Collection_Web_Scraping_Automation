@@ -4,8 +4,9 @@ setlocal
 cd /d "%~dp0"
 
 echo ============================================================
-echo  Automation Control Panel
-echo  http://localhost:8502
+echo  SmartCare CEM Pipeline
+echo  Step 1/2: Download latest export from the SmartCare portal
+echo  Step 2/2: Analyze it and update the historical archive
 echo ============================================================
 echo.
 
@@ -18,10 +19,10 @@ if not exist "%PYTHON_EXE%" (
     exit /b 1
 )
 
-"%PYTHON_EXE%" -m streamlit run "%~dp0control_panel.py" --server.port 8502 --server.address localhost --browser.gatherUsageStats false
+"%PYTHON_EXE%" "%~dp0reports\run_smartcare_analysis_task.py"
 
 echo.
 echo ============================================================
-echo  Control panel stopped (exit code %ERRORLEVEL%)
+echo  Pipeline finished (exit code %ERRORLEVEL%)
 echo ============================================================
 pause

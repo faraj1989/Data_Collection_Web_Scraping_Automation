@@ -1,3 +1,15 @@
+"""Continuous NetEco Historical Alarms exporter.
+
+Same login/session/export logic as scrapers/neteco_continuous all alrams.py
+(same eviewwebsite portal, same NETECO_USERNAME/NETECO_PASSWORD) with only the
+report URL swapped from the All Alarms view to Historical Alarms
+(fmHistoryAlarm) - historical alarms are already-occurred-and-cleared events,
+so this is a separate feed from the live/current alarm scrapers.
+
+The session stays open the whole run: login happens once, then every cycle
+just re-navigates to the Historical Alarms URL and clicks Export/All/OK again
+so newly occurred/cleared alarms show up without a fresh login each time.
+"""
 import os
 import sys
 import shutil
@@ -26,13 +38,20 @@ if hasattr(sys.stderr, "reconfigure"):
 USERNAME = env_str("NETECO_USERNAME")
 PASSWORD = env_str("NETECO_PASSWORD")
 URL = env_str("NETECO_URL")
+HISTORICAL_ALARMS_URL = env_str(
+    "NETECO_HISTORICAL_ALARMS_URL",
+    "https://10.171.68.2:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmHistoryAlarm&_t=1787594162",
+)
 
-DOWNLOAD_DIR = env_path_str("NETECO_DOWNLOAD_DIR", os.path.join(os.path.expanduser("~"), "Downloads"))
-EXPORT_BASE_DIR = env_path_str("NETECO_EXPORT_BASE_DIR", r"C:\Current_Alarms")
+DOWNLOAD_DIR = env_path_str(
+    "NETECO_HISTORICAL_DOWNLOAD_DIR",
+    os.path.join(env_path_str("NETECO_DOWNLOAD_DIR", os.path.join(os.path.expanduser("~"), "Downloads")), "Historical"),
+)
+EXPORT_BASE_DIR = env_path_str("NETECO_HISTORICAL_EXPORT_BASE_DIR", r"C:\Historical_Alarms")
 
 WAIT_TIMEOUT = env_int("NETECO_WAIT_TIMEOUT", 60)
-INTERVAL_SECONDS = env_int("NETECO_INTERVAL_SECONDS", 300)
-DOWNLOAD_TIMEOUT_SECONDS = env_int("NETECO_DOWNLOAD_TIMEOUT_SECONDS", 180)
+INTERVAL_SECONDS = env_int("NETECO_HISTORICAL_INTERVAL_SECONDS", 420)  # 7 minutes
+DOWNLOAD_TIMEOUT_SECONDS = env_int("NETECO_HISTORICAL_DOWNLOAD_TIMEOUT_SECONDS", 600)  # export can take 1+ minutes
 DOWNLOAD_STABLE_SECONDS = env_int("NETECO_DOWNLOAD_STABLE_SECONDS", 5)
 RETRY_DELAY_SECONDS = env_int("NETECO_RETRY_DELAY_SECONDS", 60)
 MAX_CONSECUTIVE_FAILURES = env_int("NETECO_MAX_CONSECUTIVE_FAILURES", 5)
@@ -154,7 +173,7 @@ def wait_for_download(download_dir, before_files, timeout=DOWNLOAD_TIMEOUT_SECON
 
 
 def create_driver():
-    """Create Chrome driver with proper options - FIXED to match MAE scraper."""
+    """Create Chrome driver with proper options - same as the other NetEco scrapers."""
     global driver
 
     try:
@@ -168,12 +187,12 @@ def create_driver():
     chrome_options.set_capability("acceptInsecureCerts", True)
     chrome_options.page_load_strategy = "eager"
 
-    # Same as MAE scraper - working options
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-insecure-localhost")
     chrome_options.add_argument("--allow-running-insecure-content")
     chrome_options.add_argument("--allow-legacy-insecure-renegotiation")
-    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
 
     chrome_options.add_experimental_option(
         "prefs",
@@ -189,12 +208,10 @@ def create_driver():
     )
 
     try:
-        # Try webdriver_manager first (same as MAE scraper)
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=chrome_options)
         log(f"✅ Chrome started with ChromeDriver: {service.path}")
 
-        # Print versions (like MAE scraper)
         caps = driver.capabilities
         browser_version = caps.get("browserVersion") or caps.get("version")
         log(f"🔧 Browser version: {browser_version}")
@@ -206,7 +223,6 @@ def create_driver():
         log(f"❌ Failed to start Chrome with webdriver_manager: {e}")
         log("   Trying fallback with Selenium Manager...")
 
-        # Fallback: Let Selenium Manager handle it
         driver = webdriver.Chrome(options=chrome_options)
         log(f"✅ Chrome started with Selenium Manager")
         driver.set_page_load_timeout(WAIT_TIMEOUT)
@@ -243,8 +259,16 @@ def login_and_navigate(driver):
         EC.presence_of_element_located((By.XPATH, current_alarms_xpath))
     )
     driver.execute_script("arguments[0].click();", current_alarms_btn)
-    log("Reached Current Alarms.")
+    log("Reached Current Alarms (session established).")
     time.sleep(10)
+
+
+def navigate_to_historical_alarms(driver):
+    driver.get(HISTORICAL_ALARMS_URL)
+    WebDriverWait(driver, WAIT_TIMEOUT).until(
+        lambda d: d.execute_script("return document.readyState") in {"interactive", "complete"}
+    )
+    time.sleep(3)
 
 
 def click_export_button(driver):
@@ -285,6 +309,7 @@ def run_export_sequence(driver):
     )
     driver.execute_script("arguments[0].click();", ok_confirm)
 
+    log(f"Waiting for download (timeout {DOWNLOAD_TIMEOUT_SECONDS}s)...")
     downloaded_file = wait_for_download(DOWNLOAD_DIR, before_files)
     if not downloaded_file:
         log("Download timed out. Next export will wait for the normal interval.")
@@ -294,7 +319,7 @@ def run_export_sequence(driver):
     dest_dir = ensure_dir(dest_dir)
 
     extension = os.path.splitext(downloaded_file)[1]
-    new_name = f"CurrentAlarms_NetEco_{time.strftime('%Y%m%d_%H%M%S')}{extension}"
+    new_name = f"NetEco_Historical_Alarm_{time.strftime('%Y%m%d_%H%M%S')}{extension}"
     new_path = os.path.join(dest_dir, new_name)
 
     shutil.move(downloaded_file, new_path)
@@ -339,6 +364,7 @@ def main():
 
             log("Starting export cycle...")
             last_export_attempt_time = time.time()
+            navigate_to_historical_alarms(driver)
             run_export_sequence(driver)
             consecutive_failures = 0
 
@@ -351,11 +377,10 @@ def main():
             log(f"Error occurred: {exc}")
             log(f"Failure {consecutive_failures}/{MAX_CONSECUTIVE_FAILURES}.")
 
-            # Save screenshot to Errors folder
             try:
                 if driver:
                     screenshot_path = os.path.join(ERROR_SCREENSHOT_DIR,
-                                                   f"neteco_error_{time.strftime('%Y%m%d_%H%M%S')}.png")
+                                                   f"neteco_historical_error_{time.strftime('%Y%m%d_%H%M%S')}.png")
                     driver.save_screenshot(screenshot_path)
                     log(f"📸 Screenshot saved as: {screenshot_path}")
             except Exception as screenshot_error:

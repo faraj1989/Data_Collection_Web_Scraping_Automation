@@ -38,6 +38,8 @@ SHARED_FOLDER = ensure_dir(SHARED_FOLDER)
 # =====================================================
 
 def get_latest_date_folder():
+    
+
     date_folders = [
         d for d in BASE_DIR.iterdir()
         if d.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", d.name)
@@ -177,7 +179,7 @@ def read_latest_mae(latest_date_folder):
 
 
 def read_latest_neteco(latest_date_folder):
-    neteco_files = glob.glob(str(latest_date_folder / "CurrentAlarms_NetEco_*.csv"))
+    neteco_files = glob.glob(str(latest_date_folder / "NetEco_All_Current_Alarm_*.csv"))
     if not neteco_files:
         print(f"WARNING: No NetEco files found in {latest_date_folder}")
         return 0, pd.DataFrame(columns=["Site Name", "Power Reason (NOC)", "Mains Failure Time"]), pd.DataFrame()

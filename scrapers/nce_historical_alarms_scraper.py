@@ -1,16 +1,11 @@
-"""Continuous MAE Historical Alarms exporter.
+"""Continuous NCE Historical Alarms exporter.
 
-Same login system and Export/All/OK flow as scrapers/mae_scraper_newerBrowserversion149.py
-(same OSS/MAE portal, same credentials) but pointed at the Historical Alarms
-deep link instead of Current Alarms. The URL already deep-links straight into
-fmHistoryAlarm, so there is no "click Current Alarms" navigation step here.
-
-Refreshes the page before every export cycle (like the current-alarms
-scraper) rather than reusing the same open export dialog/session across
-cycles: reusing it left the export dropdown in a stale state after the first
-click, so every export after the first silently never triggered a download
-and timed out. Only re-logs in if the refresh reveals the session actually
-dropped.
+Same login/session/export logic as scrapers/nce_active_alarms_scraper.py
+(same NCE portal at 10.171.69.101, same NCE_USERNAME/NCE_PASSWORD login form)
+with only the URL swapped from the Active/Current Alarms view (fmAlarmView)
+to Historical Alarms (fmHistoryAlarm) - historical alarms are
+already-occurred-and-cleared events, so this is a separate feed from the
+live/active alarm scraper.
 """
 import os
 import sys
@@ -35,24 +30,21 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # ================== USER CONFIG =====================
-USERNAME = env_str("MAE_USERNAME")
-PASSWORD = env_str("MAE_PASSWORD")
+USERNAME = env_str("NCE_USERNAME")
+PASSWORD = env_str("NCE_PASSWORD")
 DEFAULT_URL = (
-    "https://10.171.68.68:31943/ossfacewebsite/index.html#Access/fmHistoryAlarm@@"
-    "fmAlarmApp_historyAlarm_templateId143%26tabTitle%3DHistorical%20Alarms%20MAE%20last%207days"
-    "?maeUrl=%2Feviewwebsite%2Findex.html%23path%3D%2FfmAlarmApp%2FfmHistoryAlarm%26templateId%3D143"
-    "%26fmPage%3Dtrue%26_t%3D1787561843039"
-    "&maeTitle=Historical%20Alarms%20-%20%5BHistorical%20Alarms%20MAE%20last%207days%5D&loadType=iframe"
+    "https://10.171.69.101:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmHistoryAlarm"
+    "&templateId=15&fmPage=true&_t=1788008434371"
 )
-URL = env_str("MAE_HISTORICAL_URL", DEFAULT_URL)
+URL = env_str("NCE_HISTORICAL_URL", DEFAULT_URL)
 DOWNLOAD_DIR = env_path_str(
-    "MAE_HISTORICAL_DOWNLOAD_DIR",
-    os.path.join(env_path_str("MAE_DOWNLOAD_DIR", os.path.join(os.path.expanduser("~"), "Downloads")), "Historical"),
+    "NCE_HISTORICAL_DOWNLOAD_DIR",
+    os.path.join(os.path.expanduser("~"), "Downloads", "NCE_Historical"),
 )
-EXPORT_BASE_DIR = env_path_str("MAE_HISTORICAL_EXPORT_BASE_DIR", r"C:\Historical_Alarms")
-WAIT_TIMEOUT = env_int("MAE_WAIT_TIMEOUT", 45)
-DOWNLOAD_TIMEOUT = env_int("MAE_HISTORICAL_DOWNLOAD_TIMEOUT", 600)
-INTERVAL_SECONDS = env_int("MAE_HISTORICAL_INTERVAL_SECONDS", 300)
+EXPORT_BASE_DIR = env_path_str("NCE_HISTORICAL_EXPORT_BASE_DIR", r"C:\NCE_Historical_Alarms")
+WAIT_TIMEOUT = env_int("NCE_WAIT_TIMEOUT", 45)
+DOWNLOAD_TIMEOUT = env_int("NCE_HISTORICAL_DOWNLOAD_TIMEOUT", 600)
+INTERVAL_SECONDS = env_int("NCE_HISTORICAL_INTERVAL_SECONDS", 300)
 
 DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
 
@@ -71,7 +63,7 @@ EXPORT_BASE_DIR = ensure_dir(EXPORT_BASE_DIR)
 ERROR_SCREENSHOT_DIR = ensure_dir(os.path.join(DATA_ROOT, "Errors"))
 
 if not USERNAME or not PASSWORD:
-    raise RuntimeError("MAE_USERNAME and MAE_PASSWORD must be configured in .env or environment variables.")
+    raise RuntimeError("NCE_USERNAME and NCE_PASSWORD must be configured in .env or environment variables.")
 
 
 def wait_for_file(download_dir, before_files, timeout):
@@ -196,10 +188,9 @@ EXPORT_XPATH = "//button[normalize-space()='Export']"
 
 def find_frame_with_export(timeout=WAIT_TIMEOUT):
     """Locate the (possibly nested) iframe holding the alarm table's Export
-    button. The ossfacewebsite historical-alarms URL wraps the real
-    eviewwebsite alarm view inside an iframe whose id is not 'fmAlarmView'
-    (that id only applies to the plain eviewwebsite Current Alarms page), so
-    this searches every iframe instead of relying on a fixed id."""
+    button, searching every iframe instead of relying on a fixed id (the NCE
+    portal's own iframe nesting hasn't been confirmed, so this stays as
+    defensive as the MAE historical scraper's version)."""
 
     def search(depth=0):
         if driver.find_elements(By.XPATH, EXPORT_XPATH):
@@ -253,7 +244,7 @@ def click_export_and_download():
     date_folder = time.strftime("%Y-%m-%d")
     dest_dir = ensure_dir(os.path.join(EXPORT_BASE_DIR, date_folder))
     ext = os.path.splitext(downloaded_file)[1]
-    new_filename = f"HistoricalAlarms_MAE_{time.strftime('%Y%m%d_%H%M%S')}{ext}"
+    new_filename = f"HistoricalAlarms_NCE_{time.strftime('%Y%m%d_%H%M%S')}{ext}"
     dest_path = os.path.join(dest_dir, new_filename)
     shutil.move(downloaded_file, dest_path)
     return dest_path
@@ -262,7 +253,7 @@ def click_export_and_download():
 def save_error_screenshot(label):
     try:
         screenshot_path = os.path.join(
-            ERROR_SCREENSHOT_DIR, f"mae_historical_{label}_{time.strftime('%Y%m%d_%H%M%S')}.png"
+            ERROR_SCREENSHOT_DIR, f"nce_historical_{label}_{time.strftime('%Y%m%d_%H%M%S')}.png"
         )
         driver.save_screenshot(screenshot_path)
         print(f"Screenshot saved as: {screenshot_path}")
@@ -302,7 +293,7 @@ def main():
     except KeyboardInterrupt:
         print("Stopped by user.")
     except Exception as e:
-        print(f"Historical alarms exporter failed: {e}")
+        print(f"NCE historical alarms exporter failed: {e}")
         save_error_screenshot("fatal_error")
         raise
     finally:

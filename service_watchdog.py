@@ -1,15 +1,14 @@
 """Headless watchdog that keeps the continuous automation scripts running.
 
-Unlike orchestrator_gui.py (a GUI you start/stop by hand), this has no window
-and needs no interaction: point Windows Task Scheduler or the Startup folder
-at it once (see "Start Automation Watchdog.bat") and it checks every
-CHECK_INTERVAL_SECONDS whether each managed script is alive, relaunching any
-that crashed or were never started - forever, until the machine reboots or
-the watchdog process itself is stopped.
+This has no window and needs no interaction: point Windows Task Scheduler or
+the Startup folder at it once (see "Start Automation Watchdog.bat") and it
+checks every CHECK_INTERVAL_SECONDS whether each managed script is alive,
+relaunching any that crashed or were never started - forever, until the
+machine reboots or the watchdog process itself is stopped.
 
-The set of managed scripts comes from control_panel.py's SCRIPT_REGISTRY (the
-single source of truth for "what scripts exist in this project"), so the
-watchdog can never drift out of sync with what the Services tab manages.
+The set of managed scripts comes from script_registry.py's SCRIPT_REGISTRY
+(the single source of truth for "what scripts exist in this project"), so the
+watchdog can never drift out of sync with what the rest of the tooling manages.
 """
 import os
 import subprocess
@@ -17,7 +16,7 @@ import sys
 import time
 from datetime import datetime
 
-from control_panel import (
+from script_registry import (
     CONTINUOUS_SCRIPTS,
     LOG_DIR,
     PROJECT_ROOT,

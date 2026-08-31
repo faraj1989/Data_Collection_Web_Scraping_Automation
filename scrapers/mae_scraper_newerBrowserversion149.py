@@ -3,6 +3,7 @@ import sys
 import time
 import shutil
 import winreg
+import zipfile
 from selenium import webdriver
 from selenium.common.exceptions import InvalidSessionIdException
 from selenium.webdriver.chrome.service import Service
@@ -120,7 +121,8 @@ def create_driver():
 # ========== INITIALIZE BROWSER ==========
 chrome_options = Options()
 chrome_options.add_argument("--ignore-certificate-errors")
-chrome_options.add_argument("--start-maximized")
+chrome_options.add_argument("--headless=new")
+chrome_options.add_argument("--window-size=1920,1080")
 chrome_options.add_experimental_option("prefs", {
     "download.default_directory": DOWNLOAD_DIR,
     "download.prompt_for_download": False,
@@ -318,7 +320,21 @@ try:
                 dest_dir = os.path.join(EXPORT_BASE_DIR, date_folder)
                 dest_dir = ensure_dir(dest_dir)  # Ensure destination exists
                 new_filename = f"CurrentAlarms_MAE_{time.strftime('%Y%m%d_%H%M%S')}.csv"
-                shutil.move(downloaded_file, os.path.join(dest_dir, new_filename))
+                dest_path = os.path.join(dest_dir, new_filename)
+
+                if zipfile.is_zipfile(downloaded_file):
+                    # MAE zips the export once it crosses a size threshold; unwrap it
+                    # so downstream readers always see a plain CSV.
+                    with zipfile.ZipFile(downloaded_file) as zf:
+                        csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+                        if not csv_names:
+                            raise RuntimeError(f"MAE export zip had no CSV inside: {zf.namelist()}")
+                        with zf.open(csv_names[0]) as src, open(dest_path, "wb") as dst:
+                            shutil.copyfileobj(src, dst)
+                    os.remove(downloaded_file)
+                else:
+                    shutil.move(downloaded_file, dest_path)
+
                 print(f"✅ Export Success: {new_filename}")
             else:
                 print("❌ Download timed out.")
