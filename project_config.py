@@ -50,7 +50,10 @@ def load_env_file(path=ENV_PATH, override=False):
 
 def env_str(name, default=""):
     load_env_file()
-    return os.getenv(name, default)
+    value = os.getenv(name)
+    if not value:
+        return default
+    return value
 
 
 def env_int(name, default):

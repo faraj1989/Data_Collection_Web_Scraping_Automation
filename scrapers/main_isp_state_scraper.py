@@ -82,10 +82,12 @@ HEADLESS = env_str("MAIN_ISP_HEADLESS", "false").strip().lower() == "true"
 # earlier recordings used 1365x911 and are superseded.
 WINDOW_WIDTH, WINDOW_HEIGHT = 1437, 877
 
-# Direct deep link into U2000's Webswing session, found in production use
-# after the portal launcher tile's selector proved unreliable (missing/
-# renamed depending on portal layout state - see open_u2000_app()). The
-# fragment after "#page=" is base64 for
+# Direct deep link into U2000's Webswing session - previously used in place
+# of the portal launcher tile click below, but confirmed live on 2026-09-06
+# to no longer reliably reach U2000 (it silently falls back to the portal's
+# own default view instead). Kept only as a fallback attempt in
+# open_u2000_app(); the tile click is primary now. The fragment after
+# "#page=" is base64 for
 # "Action=com.huawei.u2000.unitedmgr.topo.action.DoWebTopoAction" - U2000's
 # topology view. No session token embedded, so it's safe to hardcode/reuse
 # across logins.
@@ -94,6 +96,14 @@ DEFAULT_U2000_TOPO_URL = (
     "#page=QWN0aW9uJTNEY29tLmh1YXdlaS51MjAwMC51bml0ZWRtZ3IudG9wby5hY3Rpb24uRG9XZWJUb3BvQWN0aW9u"
 )
 U2000_TOPO_URL = env_str("MAIN_ISP_TOPO_URL", DEFAULT_U2000_TOPO_URL)
+
+# Portal home page with the app-tile launcher. Re-confirmed working via a
+# fresh Chrome DevTools Recorder pass on 2026-09-06: navigate here, then
+# click the "Network Management" (U2000) tile.
+DEFAULT_PORTAL_HOME_URL = (
+    "https://10.171.69.101:31943/ncecommonwebsite/v1/newportal/index.html?refr-flags=e"
+)
+PORTAL_HOME_URL = env_str("MAIN_ISP_PORTAL_URL", DEFAULT_PORTAL_HOME_URL)
 
 DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
 
@@ -241,17 +251,69 @@ def login():
     time.sleep(3)
 
 
+def _u2000_loaded(timeout=20):
+    """True once a real Webswing canvas is present - the only reliable
+    signal that U2000 actually loaded. Earlier this checked for the Monitor
+    ribbon button's DOM id instead, but that id turned out to be present
+    (and clickable) even on the portal's own default page, which is
+    presumably a shared id in the portal's menu-registration markup - so it
+    passed the check while still being on the wrong page entirely (confirmed
+    live 2026-09-06). A canvas can't lie the same way."""
+    try:
+        WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "[id^='wrapper-'] canvas"))
+        )
+        return True
+    except Exception:
+        return False
+
+
 def open_u2000_app():
-    """Navigate directly to U2000's Webswing session via a deep link
-    (U2000_TOPO_URL) rather than clicking the portal launcher tile - the
-    tile's selector (#appComContainer_U2020-F_U2000_App /
-    #U2020-F_U2000_AppTipsImgContainer) proved unreliable in production
-    (missing/renamed depending on portal layout state), while this URL is
-    deterministic. See module-level comment on U2000_TOPO_URL."""
-    print("Opening U2000 app (direct URL)...")
-    driver.get(U2000_TOPO_URL)
+    """Navigate to the portal home page and click the "Network Management"
+    (U2000) app tile. A direct deep link into U2000's Webswing session
+    (U2000_TOPO_URL) was used here previously and was more deterministic
+    when it worked, but was confirmed live on 2026-09-06 to no longer
+    reliably reach U2000 - it silently falls back to the portal's default
+    view instead, and clicking pixel coordinates meant for U2000 against
+    that wrong page is what produced a confusing low-level chromedriver
+    error rather than an obvious one. The tile click below was re-confirmed
+    working the same day via a fresh Chrome DevTools Recorder pass. The old
+    deep link is kept as a fallback attempt in case the tile ever becomes
+    unreliable again (see module docstring's FRAGILITY WARNING)."""
+    print("Opening U2000 app (portal tile)...")
+    driver.get(PORTAL_HOME_URL)
     wait_for_ready_state()
-    time.sleep(10)  # Webswing session needs time to establish and paint the canvas
+    time.sleep(2)
+
+    tile_selectors = [
+        (By.CSS_SELECTOR, "div.brick_container_U2020-F_U2000_App div.appComNameContainer"),
+        (By.XPATH, '//*[@id="appComContainer_U2020-F_U2000_App"]/div[2]'),
+    ]
+    clicked = False
+    for by, selector in tile_selectors:
+        try:
+            elem = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((by, selector)))
+            driver.execute_script("arguments[0].click();", elem)
+            clicked = True
+            break
+        except Exception:
+            continue
+
+    if clicked:
+        time.sleep(10)  # Webswing session needs time to establish and paint the canvas
+
+    if not clicked or not _u2000_loaded():
+        print("Tile click didn't reach U2000 - falling back to the direct deep link...")
+        driver.get(U2000_TOPO_URL)
+        wait_for_ready_state()
+        time.sleep(10)
+
+    if not _u2000_loaded():
+        save_error_screenshot("u2000_not_loaded")
+        raise RuntimeError(
+            "U2000 app did not load (neither the portal tile nor the direct deep "
+            "link produced a Webswing canvas). See the u2000_not_loaded screenshot."
+        )
 
 
 def find_webswing_canvas():

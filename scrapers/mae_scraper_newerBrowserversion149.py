@@ -112,9 +112,13 @@ def create_driver():
         pass
 
     print("🔧 Starting Chrome browser...")
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    print(f"🔧 Using ChromeDriver at: {service.path}")
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print(f"🔧 Using ChromeDriver at: {service.path}")
+    except Exception as e:
+        print(f"webdriver_manager failed ({e}); falling back to Selenium Manager")
+        driver = webdriver.Chrome(options=chrome_options)
     print_driver_versions()
 
 

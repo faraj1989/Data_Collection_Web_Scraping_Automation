@@ -50,7 +50,7 @@ def init_driver():
     chrome_options = Options()
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-insecure-localhost")
-    chrome_options.add_argument("--headless=new")
+    #chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
 
     prefs = {
