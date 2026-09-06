@@ -1,6 +1,6 @@
 """Continuous Main ISP State exporter (NCE U2000 Performance Instance).
 
-Same NCE portal (10.171.69.101) and login form as scrapers/nce_active_alarms_scraper.py,
+Same NCE portal and login form as scrapers/nce_active_alarms_scraper.py,
 but a completely different app within it: opening "U2000" from the portal
 launcher loads Huawei's network manager as a Webswing-streamed Java desktop
 application - the UI is a live bitmap painted onto a <canvas> element, not a
@@ -57,11 +57,7 @@ if hasattr(sys.stderr, "reconfigure"):
 # ================== USER CONFIG =====================
 USERNAME = env_str("NCE_USERNAME")
 PASSWORD = env_str("NCE_PASSWORD")
-DEFAULT_URL = (
-    "https://10.171.69.101:31943/unisso/login.action?service=%2Funisess%2Fv1%2Fauth%3Fservice"
-    "%3D%252Fncecommonwebsite%252Fv1%252Fnewportal%252Fportal%252Floading%252Floading.html&decision=1"
-)
-URL = env_str("MAIN_ISP_URL", DEFAULT_URL)
+URL = env_str("MAIN_ISP_URL")
 DOWNLOAD_DIR = env_path_str(
     "MAIN_ISP_DOWNLOAD_DIR",
     os.path.join(os.path.expanduser("~"), "Downloads", "Main_ISP_State"),
@@ -90,22 +86,15 @@ WINDOW_WIDTH, WINDOW_HEIGHT = 1437, 877
 # "#page=" is base64 for
 # "Action=com.huawei.u2000.unitedmgr.topo.action.DoWebTopoAction" - U2000's
 # topology view. No session token embedded, so it's safe to hardcode/reuse
-# across logins.
-DEFAULT_U2000_TOPO_URL = (
-    "https://10.171.69.101:31943/nmsnetworkmgrwebsite/v1/webswing/indexforwebswing.html"
-    "#page=QWN0aW9uJTNEY29tLmh1YXdlaS51MjAwMC51bml0ZWRtZ3IudG9wby5hY3Rpb24uRG9XZWJUb3BvQWN0aW9u"
-)
-U2000_TOPO_URL = env_str("MAIN_ISP_TOPO_URL", DEFAULT_U2000_TOPO_URL)
+# across logins (host is still per-deployment, so it comes from env).
+U2000_TOPO_URL = env_str("MAIN_ISP_TOPO_URL")
 
 # Portal home page with the app-tile launcher. Re-confirmed working via a
 # fresh Chrome DevTools Recorder pass on 2026-09-06: navigate here, then
 # click the "Network Management" (U2000) tile.
-DEFAULT_PORTAL_HOME_URL = (
-    "https://10.171.69.101:31943/ncecommonwebsite/v1/newportal/index.html?refr-flags=e"
-)
-PORTAL_HOME_URL = env_str("MAIN_ISP_PORTAL_URL", DEFAULT_PORTAL_HOME_URL)
+PORTAL_HOME_URL = env_str("MAIN_ISP_PORTAL_URL")
 
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 
 
 def ensure_dir(path):

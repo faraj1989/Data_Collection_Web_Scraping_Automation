@@ -1,7 +1,7 @@
 """Continuous NCE Historical Alarms exporter.
 
 Same login/session/export logic as scrapers/nce_active_alarms_scraper.py
-(same NCE portal at 10.171.69.101, same NCE_USERNAME/NCE_PASSWORD login form)
+(same NCE portal, same NCE_USERNAME/NCE_PASSWORD login form)
 with only the URL swapped from the Active/Current Alarms view (fmAlarmView)
 to Historical Alarms (fmHistoryAlarm) - historical alarms are
 already-occurred-and-cleared events, so this is a separate feed from the
@@ -32,11 +32,7 @@ if hasattr(sys.stderr, "reconfigure"):
 # ================== USER CONFIG =====================
 USERNAME = env_str("NCE_USERNAME")
 PASSWORD = env_str("NCE_PASSWORD")
-DEFAULT_URL = (
-    "https://10.171.69.101:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmHistoryAlarm"
-    "&templateId=15&fmPage=true&_t=1788008434371"
-)
-URL = env_str("NCE_HISTORICAL_URL", DEFAULT_URL)
+URL = env_str("NCE_HISTORICAL_URL")
 DOWNLOAD_DIR = env_path_str(
     "NCE_HISTORICAL_DOWNLOAD_DIR",
     os.path.join(os.path.expanduser("~"), "Downloads", "NCE_Historical"),
@@ -46,7 +42,7 @@ WAIT_TIMEOUT = env_int("NCE_WAIT_TIMEOUT", 45)
 DOWNLOAD_TIMEOUT = env_int("NCE_HISTORICAL_DOWNLOAD_TIMEOUT", 600)
 INTERVAL_SECONDS = env_int("NCE_HISTORICAL_INTERVAL_SECONDS", 300)
 
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 
 
 def ensure_dir(path):

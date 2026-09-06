@@ -18,8 +18,8 @@
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8502 --max-time 10)",
       "Bash(.venv/Scripts/python.exe -c \"import pandas, openpyxl; print\\('deps ok'\\)\")",
       "Bash(.venv/Scripts/python.exe processing/historical_noc_analysis.py --once)",
-      "Read(//c/Users/user/Desktop/Libyana_Data/Output/Historical_Alarms_Analysis/**)",
-      "Read(//c/Users/user/Desktop/Libyana_Data/Output/**)",
+      "Read(//c/Users/user/Desktop/NOC_Data/Output/Historical_Alarms_Analysis/**)",
+      "Read(//c/Users/user/Desktop/NOC_Data/Output/**)",
       "Bash(tasklist //FI \"IMAGENAME eq python.exe\" //FO CSV)",
       "Bash(wmic process *)",
       "Bash(.venv/Scripts/python.exe processing/enhanced_noc_analysis.py --once)"

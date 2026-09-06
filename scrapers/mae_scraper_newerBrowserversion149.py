@@ -49,7 +49,7 @@ EXPORT_BASE_DIR = ensure_dir(EXPORT_BASE_DIR)
 
 # ========== ERROR SCREENSHOT DIRECTORY ==========
 # Get the DATA_ROOT from environment or use default
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 ERROR_SCREENSHOT_DIR = ensure_dir(os.path.join(DATA_ROOT, "Errors"))
 
 # =====================================================

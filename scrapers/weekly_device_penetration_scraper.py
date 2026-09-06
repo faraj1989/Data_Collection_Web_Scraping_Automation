@@ -27,14 +27,11 @@ load_env_file()
 # dashboard (Device Penetration Rate instead of MBB Traffic Analysis) differs.
 # Falls back to the SMARTCARE_* credentials/URLs so this works out of the box
 # without duplicating login config in .env.
-LOGIN_URL = env_str("WEEKLY_DEVICE_PENETRATION_LOGIN_URL", env_str("SMARTCARE_LOGIN_URL", "https://10.171.200.52:38443/"))
-TARGET_DASHBOARD_URL = env_str(
-    "WEEKLY_DEVICE_PENETRATION_TARGET_DASHBOARD_URL",
-    "https://10.171.200.52:38443/portal-web/portal/homepage.html#SEQ.MBB_TRAFFIC_ANALYSIS.21560",
-)
+LOGIN_URL = env_str("WEEKLY_DEVICE_PENETRATION_LOGIN_URL", env_str("SMARTCARE_LOGIN_URL"))
+TARGET_DASHBOARD_URL = env_str("WEEKLY_DEVICE_PENETRATION_TARGET_DASHBOARD_URL")
 EXPORT_TASK_URL = env_str(
     "WEEKLY_DEVICE_PENETRATION_EXPORT_TASK_URL",
-    env_str("SMARTCARE_EXPORT_TASK_URL", "https://10.171.200.52:38443/portal-web/portal/homepage.html#SEP.ASYNC_EXPORT.590020"),
+    env_str("SMARTCARE_EXPORT_TASK_URL"),
 )
 USERNAME = env_str("WEEKLY_DEVICE_PENETRATION_USERNAME", env_str("SMARTCARE_USERNAME"))
 PASSWORD = env_str("WEEKLY_DEVICE_PENETRATION_PASSWORD", env_str("SMARTCARE_PASSWORD"))

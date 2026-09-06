@@ -35,7 +35,7 @@ logging.getLogger("paramiko").setLevel(logging.WARNING)
 # CENTRALIZED DIRECTORIES (from GUI)
 # ======================================================
 # Data root from GUI
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 
 # Subscribers paths
 SUBSCRIBERS_RAW_DIR = os.path.join(DATA_ROOT, "Subscribers", "Raw Data")
@@ -785,7 +785,7 @@ def main():
         final_df = prep(peak_cs, "Number of Registered Subscribers(entries)")
         final_df = final_df.rename(columns={
             "Number of Registered Subscribers(entries)":
-                "Number of Registered Subscribers (Almadar in Libyana Metwork)"
+                "Number of Registered Subscribers (CS Network)"
         })
         final_df["Branch"] = "East"
     else:
@@ -841,15 +841,15 @@ def main():
         ps_iu_tmp = prep(peak_iu, "Iu mode attached Max user number per PLMN(number)")
         ps_s1_tmp = prep(peak_s1, "S1 Mode Maximum Attached Users per PLMN(number)")
         ps_merge = ps_iu_tmp.merge(ps_s1_tmp, on=["year", "Week"], how="outer")
-        ps_merge["Number of Registered Subscribers (Almadar in Libyana PS Network) for(3G,4G)"] = (
+        ps_merge["Number of Registered Subscribers (PS Network) for(3G,4G)"] = (
                 "3G=" + ps_merge["Iu mode attached Max user number per PLMN(number)"].astype(str)
                 + ",4G=" + ps_merge["S1 Mode Maximum Attached Users per PLMN(number)"].astype(str)
         )
         ps_merge = ps_merge[
-            ["year", "Week", "Number of Registered Subscribers (Almadar in Libyana PS Network) for(3G,4G)"]]
+            ["year", "Week", "Number of Registered Subscribers (PS Network) for(3G,4G)"]]
         final_df = final_df.merge(ps_merge, on=["year", "Week"], how="outer")
     else:
-        final_df["Number of Registered Subscribers (Almadar in Libyana PS Network) for(3G,4G)"] = ""
+        final_df["Number of Registered Subscribers (PS Network) for(3G,4G)"] = ""
 
     expected_cols = [
         "year", "Week", "Branch",
@@ -858,13 +858,13 @@ def main():
         "Number of subscribers in VLR (Connected to BSC)",
         "Number of subscribers in VLR (Connected to RNC)",
         "Max Number of EPS Attach subscribers in MME",
-        "Number of Registered Subscribers (Almadar in Libyana Metwork)",
-        "Number of Registered Subscribers (Almadar in Libyana PS Network) for(3G,4G)"
+        "Number of Registered Subscribers (CS Network)",
+        "Number of Registered Subscribers (PS Network) for(3G,4G)"
     ]
     for col in expected_cols:
         if col not in final_df.columns:
             final_df[
-                col] = 0 if col != "Number of Registered Subscribers (Almadar in Libyana PS Network) for(3G,4G)" else ""
+                col] = 0 if col != "Number of Registered Subscribers (PS Network) for(3G,4G)" else ""
 
     final_df = final_df[expected_cols]
     final_df = final_df.sort_values(["year", "Week"])

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from project_config import ENV_PATH, load_env_file, parse_env_file
 
-DEFAULT_DATA_ROOT = str(Path.home() / "Desktop" / "Libyana_Data")
+DEFAULT_DATA_ROOT = str(Path.home() / "Desktop" / "NOC_Data")
 
 
 def data_path(subfolder: str) -> str:
@@ -49,9 +49,7 @@ SETTINGS = [
             ("MAE_EXPORT_BASE_DIR", "MAE export base folder", data_path("Output/Current_Alarms"), "dir", False),
             ("MAE_WAIT_TIMEOUT", "MAE wait timeout seconds", "45", "text", False),
             ("MAE_INTERVAL_SECONDS", "MAE interval seconds", "300", "text", False),
-            ("MAE_HISTORICAL_URL", "MAE Historical Alarms URL (last 7 days)",
-             "https://10.171.68.68:31943/ossfacewebsite/index.html#Access/fmHistoryAlarm@@fmAlarmApp_historyAlarm_templateId143%26tabTitle%3DHistorical%20Alarms%20MAE%20last%207days?maeUrl=%2Feviewwebsite%2Findex.html%23path%3D%2FfmAlarmApp%2FfmHistoryAlarm%26templateId%3D143%26fmPage%3Dtrue%26_t%3D1787561843039&maeTitle=Historical%20Alarms%20-%20%5BHistorical%20Alarms%20MAE%20last%207days%5D&loadType=iframe",
-             "text", False),
+            ("MAE_HISTORICAL_URL", "MAE Historical Alarms URL (last 7 days)", "", "text", False),
             ("MAE_HISTORICAL_DOWNLOAD_DIR", "MAE Historical download folder (must differ from MAE_DOWNLOAD_DIR)",
              data_path("Input/Downloads/MAE_Historical"), "dir", False),
             ("MAE_HISTORICAL_EXPORT_BASE_DIR", "MAE Historical Alarms export folder",
@@ -65,11 +63,9 @@ SETTINGS = [
         "fields": [
             ("NETECO_URL", "NetEco URL", "", "text", False),
             ("NETECO_ALL_CURRENT_ALARMS_URL", "NetEco All Current Alarms URL (dual-tab scraper, templateId=120)",
-             "https://10.171.68.2:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmAlarmView&templateId=120&fmPage=true&_t=1787017955421",
-             "text", False),
+             "", "text", False),
             ("NETECO_ALL_ALARMS_URL", "NetEco All Alarms URL (all-alarms scraper, templateId=149)",
-             "https://10.171.68.2:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmAlarmView&templateId=149&fmPage=true&_t=1787140556610",
-             "text", False),
+             "", "text", False),
             ("NETECO_USERNAME", "NetEco username", "", "text", False),
             ("NETECO_PASSWORD", "NetEco password", "", "text", True),
             ("NETECO_DOWNLOAD_DIR", "NetEco download folder", data_path("Input/Downloads/NetEco_Current"), "dir", False),
@@ -84,9 +80,7 @@ SETTINGS = [
             ("NETECO_PORT_CHECK_TIMEOUT", "Port check timeout seconds", "5", "text", False),
             ("NETECO_ALL_DOWNLOAD_DIR", "NetEco All Alarms download folder (must differ from NETECO_DOWNLOAD_DIR)",
              data_path("Input/Downloads/AllAlarms"), "dir", False),
-            ("NETECO_HISTORICAL_ALARMS_URL", "NetEco Historical Alarms URL",
-             "https://10.171.68.2:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmHistoryAlarm&_t=1787594162",
-             "text", False),
+            ("NETECO_HISTORICAL_ALARMS_URL", "NetEco Historical Alarms URL", "", "text", False),
             ("NETECO_HISTORICAL_DOWNLOAD_DIR", "NetEco Historical download folder (must differ from NETECO_DOWNLOAD_DIR)",
              data_path("Input/Downloads/NetEco_Historical"), "dir", False),
             ("NETECO_HISTORICAL_EXPORT_BASE_DIR", "NetEco Historical Alarms export folder",
@@ -103,18 +97,14 @@ SETTINGS = [
             ("NCE_USERNAME", "NCE username", "", "text", False),
             ("NCE_PASSWORD", "NCE password", "", "text", True),
             ("NCE_WAIT_TIMEOUT", "NCE wait timeout seconds", "45", "text", False),
-            ("NCE_ACTIVE_URL", "NCE Active (Current) Alarms URL",
-             "https://10.171.69.101:31943/eviewwebsite/index.html?nceapp=Common_Alarm#path=/fmAlarmApp/fmAlarmView&_t=1788010819",
-             "text", False),
+            ("NCE_ACTIVE_URL", "NCE Active (Current) Alarms URL", "", "text", False),
             ("NCE_ACTIVE_DOWNLOAD_DIR", "NCE Active download folder", data_path("Input/Downloads/NCE_Active"),
              "dir", False),
             ("NCE_ACTIVE_EXPORT_BASE_DIR", "NCE Active Alarms export folder",
              data_path("Output/NCE_Current_Alarms"), "dir", False),
             ("NCE_ACTIVE_INTERVAL_SECONDS", "NCE Active re-export interval seconds", "300", "text", False),
             ("NCE_ACTIVE_DOWNLOAD_TIMEOUT", "NCE Active download timeout seconds", "600", "text", False),
-            ("NCE_HISTORICAL_URL", "NCE Historical Alarms URL",
-             "https://10.171.69.101:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmHistoryAlarm&templateId=15&fmPage=true&_t=1788008434371",
-             "text", False),
+            ("NCE_HISTORICAL_URL", "NCE Historical Alarms URL", "", "text", False),
             ("NCE_HISTORICAL_DOWNLOAD_DIR", "NCE Historical download folder (must differ from NCE_ACTIVE_DOWNLOAD_DIR)",
              data_path("Input/Downloads/NCE_Historical"), "dir", False),
             ("NCE_HISTORICAL_EXPORT_BASE_DIR", "NCE Historical Alarms export folder",
@@ -161,9 +151,7 @@ SETTINGS = [
         "fields": [
             ("WEEKLY_DEVICE_PENETRATION_LOGIN_URL", "Login URL (blank = fall back to SmartCare login URL)", "",
              "text", False),
-            ("WEEKLY_DEVICE_PENETRATION_TARGET_DASHBOARD_URL", "Target dashboard URL",
-             "https://10.171.200.52:38443/portal-web/portal/homepage.html#SEQ.MBB_TRAFFIC_ANALYSIS.21560",
-             "text", False),
+            ("WEEKLY_DEVICE_PENETRATION_TARGET_DASHBOARD_URL", "Target dashboard URL", "", "text", False),
             ("WEEKLY_DEVICE_PENETRATION_EXPORT_TASK_URL", "Export task URL (blank = fall back to SmartCare export task URL)",
              "", "text", False),
             ("WEEKLY_DEVICE_PENETRATION_USERNAME", "Username (blank = fall back to SmartCare username)", "", "text", False),
@@ -327,7 +315,7 @@ def write_env_file(values):
             except OSError:
                 pass
 
-    lines = ["# Libyana Automation project settings",
+    lines = ["# NOC Automation project settings",
              "# This file contains secrets and is intentionally ignored by Git.", ""]
     for section in SETTINGS:
         lines.append(f"# {section['section']}")

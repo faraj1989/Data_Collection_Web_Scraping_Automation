@@ -26,10 +26,7 @@ if hasattr(sys.stderr, "reconfigure"):
 USERNAME = env_str("NETECO_USERNAME")
 PASSWORD = env_str("NETECO_PASSWORD")
 URL = env_str("NETECO_URL")
-ALL_ALARMS_URL = env_str(
-    "NETECO_ALL_ALARMS_URL",
-    "https://10.171.68.2:31943/eviewwebsite/index.html#path=/fmAlarmApp/fmAlarmView&templateId=149&fmPage=true&_t=1787140556610",
-)
+ALL_ALARMS_URL = env_str("NETECO_ALL_ALARMS_URL")
 
 DOWNLOAD_DIR = env_path_str(
     "NETECO_ALL_DOWNLOAD_DIR",
@@ -64,7 +61,7 @@ DOWNLOAD_DIR = ensure_dir(DOWNLOAD_DIR)
 EXPORT_BASE_DIR = ensure_dir(EXPORT_BASE_DIR)
 
 # ========== ERROR SCREENSHOT DIRECTORY ==========
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 ERROR_SCREENSHOT_DIR = ensure_dir(os.path.join(DATA_ROOT, "Errors"))
 
 # =====================================================

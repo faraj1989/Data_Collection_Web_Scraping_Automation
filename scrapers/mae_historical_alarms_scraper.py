@@ -37,14 +37,7 @@ if hasattr(sys.stderr, "reconfigure"):
 # ================== USER CONFIG =====================
 USERNAME = env_str("MAE_USERNAME")
 PASSWORD = env_str("MAE_PASSWORD")
-DEFAULT_URL = (
-    "https://10.171.68.68:31943/ossfacewebsite/index.html#Access/fmHistoryAlarm@@"
-    "fmAlarmApp_historyAlarm_templateId143%26tabTitle%3DHistorical%20Alarms%20MAE%20last%207days"
-    "?maeUrl=%2Feviewwebsite%2Findex.html%23path%3D%2FfmAlarmApp%2FfmHistoryAlarm%26templateId%3D143"
-    "%26fmPage%3Dtrue%26_t%3D1787561843039"
-    "&maeTitle=Historical%20Alarms%20-%20%5BHistorical%20Alarms%20MAE%20last%207days%5D&loadType=iframe"
-)
-URL = env_str("MAE_HISTORICAL_URL", DEFAULT_URL)
+URL = env_str("MAE_HISTORICAL_URL")
 DOWNLOAD_DIR = env_path_str(
     "MAE_HISTORICAL_DOWNLOAD_DIR",
     os.path.join(env_path_str("MAE_DOWNLOAD_DIR", os.path.join(os.path.expanduser("~"), "Downloads")), "Historical"),
@@ -54,7 +47,7 @@ WAIT_TIMEOUT = env_int("MAE_WAIT_TIMEOUT", 45)
 DOWNLOAD_TIMEOUT = env_int("MAE_HISTORICAL_DOWNLOAD_TIMEOUT", 600)
 INTERVAL_SECONDS = env_int("MAE_HISTORICAL_INTERVAL_SECONDS", 300)
 
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 
 
 def ensure_dir(path):

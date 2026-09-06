@@ -29,7 +29,7 @@ PROCESSED_LEDGER_FILENAME = "processed_files_ledger.json"
 # =============================================================
 # CENTRALIZED DIRECTORIES (from GUI)
 # =============================================================
-DATA_ROOT = Path(os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data"))
+DATA_ROOT = Path(os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data"))
 
 # SmartCare paths
 SMARTCARE_DOWNLOAD_DIR = Path(os.environ.get("SMARTCARE_DOWNLOAD_DIR", DATA_ROOT / "Downloads"))

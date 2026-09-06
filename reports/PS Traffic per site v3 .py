@@ -16,7 +16,7 @@ load_env_file()
 # =============================================================
 # CENTRALIZED DIRECTORIES (from GUI)
 # =============================================================
-DATA_ROOT = Path(os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data"))
+DATA_ROOT = Path(os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data"))
 
 # PS Traffic paths
 PS_TRAFFIC_SOURCE_DIR = Path(os.environ.get("PS_TRAFFIC_SOURCE_DIR", DATA_ROOT / "Subscribers" / "Raw Data"))

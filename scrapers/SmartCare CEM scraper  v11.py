@@ -23,15 +23,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 load_env_file()
 
 # --- Portal Core Configuration ---
-LOGIN_URL = env_str("SMARTCARE_LOGIN_URL", "https://10.171.200.52:38443/")
-TARGET_DASHBOARD_URL = env_str(
-    "SMARTCARE_TARGET_DASHBOARD_URL",
-    "https://10.171.200.52:38443/portal-web/portal/homepage.html#SEQ.MBB_TRAFFIC_ANALYSIS.21510",
-)
-EXPORT_TASK_URL = env_str(
-    "SMARTCARE_EXPORT_TASK_URL",
-    "https://10.171.200.52:38443/portal-web/portal/homepage.html#SEP.ASYNC_EXPORT.590020",
-)
+LOGIN_URL = env_str("SMARTCARE_LOGIN_URL")
+TARGET_DASHBOARD_URL = env_str("SMARTCARE_TARGET_DASHBOARD_URL")
+EXPORT_TASK_URL = env_str("SMARTCARE_EXPORT_TASK_URL")
 USERNAME = env_str("SMARTCARE_USERNAME")
 PASSWORD = env_str("SMARTCARE_PASSWORD")
 

@@ -1,4 +1,4 @@
-# Libyana Automation Suite
+# NOC Automation Suite
 
 Windows automation for MAE, NetEco, SmartCare, subscriber reporting, PS traffic analysis, and Telegram NOC reporting.
 

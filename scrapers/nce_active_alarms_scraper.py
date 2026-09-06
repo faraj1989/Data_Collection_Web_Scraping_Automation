@@ -1,7 +1,7 @@
 """Continuous NCE Active (Current) Alarms exporter.
 
 Same login form and Export/All/OK flow as scrapers/mae_historical_alarms_scraper.py
-(the NCE portal at 10.171.69.101 uses the same username/value login fields and
+(the NCE portal uses the same username/value login fields and
 submitDataverify/btn_outerverify submit button as MAE/NetEco). The URL is a
 direct deep link straight into fmAlarmView, so there is no extra "click
 Current Alarms" navigation step - same as the MAE historical scraper's URL.
@@ -38,11 +38,7 @@ if hasattr(sys.stderr, "reconfigure"):
 # ================== USER CONFIG =====================
 USERNAME = env_str("NCE_USERNAME")
 PASSWORD = env_str("NCE_PASSWORD")
-DEFAULT_URL = (
-    "https://10.171.69.101:31943/eviewwebsite/index.html?nceapp=Common_Alarm"
-    "#path=/fmAlarmApp/fmAlarmView&_t=1788010819"
-)
-URL = env_str("NCE_ACTIVE_URL", DEFAULT_URL)
+URL = env_str("NCE_ACTIVE_URL")
 DOWNLOAD_DIR = env_path_str(
     "NCE_ACTIVE_DOWNLOAD_DIR",
     os.path.join(os.path.expanduser("~"), "Downloads", "NCE_Active"),
@@ -52,7 +48,7 @@ WAIT_TIMEOUT = env_int("NCE_WAIT_TIMEOUT", 45)
 DOWNLOAD_TIMEOUT = env_int("NCE_ACTIVE_DOWNLOAD_TIMEOUT", 600)
 INTERVAL_SECONDS = env_int("NCE_ACTIVE_INTERVAL_SECONDS", 300)
 
-DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\Libyana_Data")
+DATA_ROOT = os.environ.get("DATA_ROOT", r"C:\Users\user\Desktop\NOC_Data")
 
 
 def ensure_dir(path):
